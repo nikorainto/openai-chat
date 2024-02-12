@@ -10,12 +10,16 @@ type SettingsState = {
   updateApiKey: (newApiKey: string) => void
   blobToken: string
   updateBlobToken: (newBlobToken: string) => void
+  databaseUrl: string
+  updateDatabaseUrl: (newDatabaseUrl: string) => void
   useChat: boolean
   updateUseChat: (newVal: boolean) => void
   useImageGeneration: boolean
   updateUseImageGeneration: (newVal: boolean) => void
   useDocumentQuery: boolean
   updateUseDocumentQuery: (newVal: boolean) => void
+  useDatabaseQuery: boolean
+  updateUseDatabaseQuery: (newVal: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -28,12 +32,16 @@ export const useSettingsStore = create<SettingsState>()(
       updateApiKey: (newApiKey) => set({ apiKey: newApiKey }),
       blobToken: '',
       updateBlobToken: (newBlobToken) => set({ blobToken: newBlobToken }),
+      databaseUrl: '',
+      updateDatabaseUrl: (newDatabaseUrl) => set({ databaseUrl: newDatabaseUrl }),
       useChat: true,
       updateUseChat: (newVal) => set({ useChat: newVal }),
       useImageGeneration: false,
       updateUseImageGeneration: (newVal) => set({ useImageGeneration: newVal }),
       useDocumentQuery: false,
       updateUseDocumentQuery: (newVal) => set({ useDocumentQuery: newVal }),
+      useDatabaseQuery: false,
+      updateUseDatabaseQuery: (newVal) => set({ useDatabaseQuery: newVal }),
     }),
     {
       name: 'settings',

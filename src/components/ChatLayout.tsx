@@ -38,6 +38,22 @@ export default function ChatLayout({ message }: ChatLayoutProps) {
             )
           },
           a: (props) => <a className="text-blue-500 hover:underline" {...props} />,
+          p: (props) => (
+            <p {...props}>
+              {props.children
+                ?.toString()
+                .split('\\n')
+                .map((line, index, array) => {
+                  const breakTag = index === array.length - 1 ? null : <br />
+                  return (
+                    <React.Fragment key={index}>
+                      {line}
+                      {breakTag}
+                    </React.Fragment>
+                  )
+                })}
+            </p>
+          ),
         }}
       >
         {message.content}

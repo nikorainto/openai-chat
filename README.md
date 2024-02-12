@@ -12,14 +12,20 @@ First, create a
 
 file in the root and add [your API key](https://platform.openai.com/account/api-keys) to it
 
-Also if you plan to use document query (RAG) feature add [vercel blob storage token](https://vercel.com/docs/storage/vercel-blob)
+if you plan to use document query (RAG) feature add [vercel blob storage token](https://vercel.com/docs/storage/vercel-blob)
+
+if you plan to use database query feature add database connection url. so far only tested with postgres. you can create free postgres instance in [elephantsql](https://www.elephantsql.com/) and for example insert [chinook](https://www.yugabyte.com/blog/postgresql-how-to-installing-the-chinook-sample-db-on-a-distributed-sql-database/#download-the-chinook-scripts) database there for testing purposes
+
+langchain api key is also optional and used only for langsmith debugging
 
 ```
 OPENAI_API_KEY=<key>
 BLOB_READ_WRITE_TOKEN=<token>
+DB_CONNECTION_URL=<url>
+LANGCHAIN_API_KEY=<key>
 ```
 
-_**Note:**_ API key and blob token can also be provided from UI but it's much less secure
+_**Note:**_ API key, blob token and db connection url can also be provided from UI but it's much less secure
 
 Then, run the development server:
 

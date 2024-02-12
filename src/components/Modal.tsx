@@ -12,10 +12,13 @@ const Modal: React.FC<Props> = ({ isOpen, onClose, children }) => {
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 my-2"
       onClick={onClose}
     >
-      <div className="m-2 bg-modal p-5 rounded-lg relative" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="m-2 bg-modal p-5 rounded-lg relative overflow-y-auto max-h-full"
+        onClick={(e) => e.stopPropagation()}
+      >
         {children}
       </div>
     </div>

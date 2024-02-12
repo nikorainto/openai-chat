@@ -49,7 +49,9 @@ const UploadImageInput: FC<UploadImageInputProps> = ({ onImageChange, file }) =>
           />
           <button
             aria-label="select file"
-            className={'flex items-center justify-center p-4 rounded bg-green-500 text-white'}
+            className={
+              'flex items-center justify-center p-4 rounded bg-green-500 text-white hidden'
+            } /* TODO: Hidden until image variation/manipulation is implemented*/
             onClick={handleClick}
           >
             <FaFileUpload className="text-xl" />

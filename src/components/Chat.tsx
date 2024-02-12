@@ -29,6 +29,7 @@ export default function Chat() {
   const setStopFunction = useUtilsStore((state) => state.setStopFunction)
   const clearStopFunction = useUtilsStore((state) => state.clearStopFunction)
   const documents = useFilesStore((state) => state.documents)
+  const databaseUrl = useSettingsStore((state) => state.databaseUrl)
 
   const {
     error,
@@ -50,10 +51,12 @@ export default function Chat() {
   const [lastValidInput, setLastValidInput] = useState(input)
   const [image, setImage] = useState<File | undefined>(undefined)
   const [documentQueryLoading, setDocumentQueryLoading] = useState(false)
+  const [databaseQueryLoading, setDatabaseQueryLoading] = useState(false)
 
   const chatFeatureSelected = useSettingsStore((state) => state.useChat)
   const imageGeneratorFeatureSelected = useSettingsStore((state) => state.useImageGeneration)
   const documentQueryFeatureSelected = useSettingsStore((state) => state.useDocumentQuery)
+  const databaseQueryFeatureSelected = useSettingsStore((state) => state.useDatabaseQuery)
 
   const { toastError } = useToast()
 
@@ -93,6 +96,8 @@ export default function Chat() {
       await handleChatOrImageFeature(event)
     } else if (documentQueryFeatureSelected) {
       await handleDocumentQueryFeature()
+    } else if (databaseQueryFeatureSelected) {
+      await handleDatabaseQueryFeature()
     } else {
       console.error('Unknown feature selected')
     }
@@ -104,6 +109,7 @@ export default function Chat() {
         chatFeatureSelected,
         imageGeneratorFeatureSelected,
         documentQueryFeatureSelected,
+        databaseQueryFeatureSelected,
       )
 
       handleSubmit(event, {
@@ -178,6 +184,51 @@ export default function Chat() {
     }
   }
 
+  const handleDatabaseQueryFeature = async () => {
+    try {
+      setDatabaseQueryLoading(true)
+
+      const userQuestion: Message = {
+        id: messages.length.toString(),
+        content: input,
+        role: 'user',
+      }
+
+      const messagesWithUserQuestion = [...messages, userQuestion]
+      setInput('')
+      setMessages(messagesWithUserQuestion)
+
+      const response = await fetch('/api/db-query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ messages: messagesWithUserQuestion, databaseUrl }),
+      })
+
+      if (!response.ok) {
+        throw await getMessageFromResponse(response)
+      }
+
+      if (!response.body) {
+        throw new Error('Response body missing!')
+      }
+
+      const data = await response.text()
+      const trimmedString: string = data.slice(1, -1)
+
+      const chatId = (messages.length + 1).toString()
+      const prevMessage: Message = { id: chatId, content: trimmedString, role: 'assistant' }
+
+      setMessages([...messagesWithUserQuestion, prevMessage])
+    } catch (e) {
+      console.error(e)
+      toastError(e as string)
+    } finally {
+      setDatabaseQueryLoading(false)
+    }
+  }
+
   const handleSendMessageClick = (event: MouseEvent<HTMLButtonElement>) => {
     handleSendMessage(event as unknown as FormEvent<HTMLFormElement>)
   }
@@ -201,7 +252,7 @@ export default function Chat() {
     <div className="overflow-hidden flex flex-col flex-1 gap-2">
       <ChatMessages
         error={error}
-        isLoading={isLoading || documentQueryLoading}
+        isLoading={isLoading || documentQueryLoading || databaseQueryLoading}
         messages={messages}
         stop={stop}
       />

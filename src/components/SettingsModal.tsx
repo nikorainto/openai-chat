@@ -11,11 +11,14 @@ export default function SettingsModal() {
   const updateApiKey = useSettingsStore((state) => state.updateApiKey)
   const previousBlobToken = useSettingsStore((state) => state.blobToken)
   const updateBlobToken = useSettingsStore((state) => state.updateBlobToken)
+  const previousDatabaseUrl = useSettingsStore((state) => state.databaseUrl)
+  const updateDatabaseUrl = useSettingsStore((state) => state.updateDatabaseUrl)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [role, setRole] = useState(previousRole)
   const [apiKey, setApiKey] = useState(previousApiKey)
   const [blobToken, setBlobToken] = useState(previousBlobToken)
+  const [databaseUrl, setDatabaseUrl] = useState(previousDatabaseUrl)
 
   const handleOpenModal = () => setModalOpen(true)
   const handleCloseModal = () => setModalOpen(false)
@@ -35,10 +38,16 @@ export default function SettingsModal() {
     setBlobToken(newValue)
   }
 
+  const handleChangeDbConnectionUrl = (event: ChangeEvent<HTMLInputElement>) => {
+    const newValue = event.target.value
+    setDatabaseUrl(newValue)
+  }
+
   const handleCancel = () => {
     updateRole(previousRole)
     updateApiKey(previousApiKey)
     updateBlobToken(previousBlobToken)
+    updateDatabaseUrl(previousDatabaseUrl)
     handleCloseModal()
   }
 
@@ -46,6 +55,7 @@ export default function SettingsModal() {
     updateRole(role.trim())
     updateApiKey(apiKey.trim())
     updateBlobToken(blobToken.trim())
+    updateDatabaseUrl(databaseUrl.trim())
     handleCloseModal()
   }
 
@@ -133,6 +143,31 @@ export default function SettingsModal() {
               className="bg-gray-700 text-gray-200 sm:text-sm rounded-lg block w-full p-2.5"
               value={blobToken}
               onChange={handleChangeBlobToken}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="db-connection-url"
+              className="block mb-2 text-sm font-medium text-gray-200"
+            >
+              DB connection url
+            </label>
+            <label className="block mb-2 text-xs font-medium text-gray-500">
+              Not needed if DB_CONNECTION_URL was provided through env. This is only needed for
+              Database query -feature
+            </label>
+            <label className="block mb-2 text-xs font-medium text-gray-500">
+              Example: postgres://username:password@hostname:port/databasename
+            </label>
+            <input
+              type="text"
+              name="db-connection-url"
+              id="db-connection-url"
+              autoComplete="off"
+              placeholder="Paste DB connection url here"
+              className="bg-gray-700 text-gray-200 sm:text-sm rounded-lg block w-full p-2.5"
+              value={databaseUrl}
+              onChange={handleChangeDbConnectionUrl}
             />
           </div>
           <div className="flex flex-row mt-4 justify-end gap-2">

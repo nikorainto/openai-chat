@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { FaRegImage } from 'react-icons/fa'
+import { FiDatabase } from 'react-icons/fi'
 import { HiOutlineDocumentSearch } from 'react-icons/hi'
 import { IoMdCheckboxOutline } from 'react-icons/io'
 import { PiChatBold } from 'react-icons/pi'
@@ -10,22 +11,26 @@ type FeatureTypes = {
   chat: string
   imageGeneration: string
   documentQuery: string
+  databaseQuery: string
 }
 
 const featureTypes: FeatureTypes = {
   chat: 'chat',
   imageGeneration: 'image generation',
   documentQuery: 'document query (RAG)',
+  databaseQuery: 'database query',
 }
 
 export const getSelectedFeature = (
   useChat: boolean,
   useImageGeneration: boolean,
   useDocumentQuery: boolean,
+  useDatabaseQuery: boolean,
 ) => {
   if (useChat) return featureTypes.chat
   if (useImageGeneration) return featureTypes.imageGeneration
   if (useDocumentQuery) return featureTypes.documentQuery
+  if (useDatabaseQuery) return featureTypes.databaseQuery
   return featureTypes.chat
 }
 
@@ -73,8 +78,11 @@ export default function GizmoPanel() {
   const useDocumentQuery = useSettingsStore((state) => state.useDocumentQuery)
   const updateUseDocumentQuery = useSettingsStore((state) => state.updateUseDocumentQuery)
 
+  const useDatabaseQuery = useSettingsStore((state) => state.useDatabaseQuery)
+  const updateUseDatabaseQuery = useSettingsStore((state) => state.updateUseDatabaseQuery)
+
   const [selectedFeature, setSelectedFeature] = useState<string | null>(
-    getSelectedFeature(useChat, useImageGeneration, useDocumentQuery),
+    getSelectedFeature(useChat, useImageGeneration, useDocumentQuery, useDatabaseQuery),
   )
 
   const handleSelectFeature = useCallback(
@@ -83,8 +91,9 @@ export default function GizmoPanel() {
       updateUseChat(feature === featureTypes.chat)
       updateUseImageGeneration(feature === featureTypes.imageGeneration)
       updateUseDocumentQuery(feature === featureTypes.documentQuery)
+      updateUseDatabaseQuery(feature === featureTypes.databaseQuery)
     },
-    [updateUseChat, updateUseImageGeneration, updateUseDocumentQuery],
+    [updateUseChat, updateUseImageGeneration, updateUseDocumentQuery, updateUseDatabaseQuery],
   )
 
   const getSelectedFeatureIcon = () => {
@@ -95,6 +104,8 @@ export default function GizmoPanel() {
         return <FaRegImage />
       case featureTypes.documentQuery:
         return <HiOutlineDocumentSearch />
+      case featureTypes.databaseQuery:
+        return <FiDatabase />
     }
   }
 
