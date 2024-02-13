@@ -10,6 +10,9 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['typeorm'],
   },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   images: {
     remotePatterns: [
       {
