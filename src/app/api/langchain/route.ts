@@ -147,7 +147,8 @@ export async function POST(req: NextRequest) {
       ],
     })
 
-    const retrievalChain = retriever.pipe(combineDocumentsFn)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const retrievalChain = retriever.pipe(combineDocumentsFn as any)
 
     const answerChain = RunnableSequence.from([
       {
