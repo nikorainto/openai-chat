@@ -49,7 +49,10 @@ function ChatMessage({ message }: Props) {
 
             // Paragraphs with better spacing
             p: (props) => (
-              <p className="leading-relaxed text-gray-300 first:mt-0 last:mb-0" {...props} />
+              <p
+                className="leading-relaxed text-gray-300 first:mt-0 last:mb-0 break-words overflow-wrap-anywhere"
+                {...props}
+              />
             ),
 
             // Enhanced lists with better spacing and nested support
