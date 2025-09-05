@@ -1,18 +1,18 @@
-import type { Message } from 'ai/react'
+import type { UIMessage } from 'ai'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 export type Chat = {
   id: string
   input: string
-  messages: Message[]
+  messages: UIMessage[]
   isSelected: boolean
 }
 
 type ChatState = {
   chats: Chat[]
   updateChatInput: (input: string) => void
-  updateChatMessages: (messages: Message[]) => void
+  updateChatMessages: (messages: UIMessage[]) => void
   updateChatSelection: (chatId: string) => void
   addChat: (chat: Chat) => void
   delChat: (chatId: string) => void

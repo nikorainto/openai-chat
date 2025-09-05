@@ -18,7 +18,8 @@ export const useModelStore = create<ModelsState>()(
       models: [
         { name: MODELS.gpt3, isSelected: false },
         { name: MODELS.gpt4, isSelected: false },
-        { name: MODELS.gpt41, isSelected: true },
+        { name: MODELS.gpt41, isSelected: false },
+        { name: MODELS.gpt5, isSelected: true },
       ],
       updateModelSelection: (modelName) =>
         set({

@@ -1,23 +1,22 @@
 import { createOpenAI } from '@ai-sdk/openai'
-import { streamText } from 'ai'
-import type { CoreMessage } from 'ai'
+import { streamText, convertToModelMessages } from 'ai'
+import type { UIMessage } from 'ai'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'edge'
 
 export async function POST(req: Request) {
   try {
-    const {
-      messages,
-      model,
-      role,
-      apiKey,
-    }: {
-      messages: CoreMessage[]
+    const { messages, model, role, apiKey } = (await req.json()) as {
+      messages: UIMessage[]
       model: string
       role: string
       apiKey: string
-    } = await req.json()
+    }
+
+    if (!model) {
+      return NextResponse.json({ error: 'Model is required' }, { status: 400 })
+    }
 
     const openai = createOpenAI({
       apiKey: apiKey || process.env.OPENAI_API_KEY || '',
@@ -30,11 +29,11 @@ export async function POST(req: Request) {
           role: 'system',
           content: role,
         },
-        ...messages,
+        ...convertToModelMessages(messages),
       ],
     })
 
-    return result.toDataStreamResponse()
+    return result.toUIMessageStreamResponse()
   } catch (error) {
     console.error('Chat API error:', error)
     return NextResponse.json(

@@ -1,8 +1,9 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
+import { DefaultChatTransport } from 'ai'
 import type { ChangeEvent, FormEvent, MouseEvent } from 'react'
-import { useEffect, useMemo, useRef, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useCallback, useState } from 'react'
 import { PiPaperPlaneRightFill } from 'react-icons/pi'
 import ChatMessages from './ChatMessages'
 import ChatTextarea from './ChatTextarea'
@@ -23,22 +24,27 @@ export default function Chat() {
   const setStopFunction = useUtilsStore((state) => state.setStopFunction)
   const clearStopFunction = useUtilsStore((state) => state.clearStopFunction)
   const currentChatIdRef = useRef<string | undefined>(undefined)
+  const [input, setInput] = useState('')
 
-  const { error, handleInputChange, handleSubmit, input, status, messages, stop, setInput } =
-    useChat({
-      id: selectedChat?.id,
+  const { messages, error, stop, status, sendMessage } = useChat({
+    id: selectedChat?.id,
+    transport: new DefaultChatTransport({
       api: '/api/chat',
-      initialInput: selectedChat?.input || '',
-      initialMessages: selectedChat?.messages || [],
       body: {
         model: selectedModel?.name,
         role,
         apiKey,
       },
-    })
+    }),
+    messages: selectedChat?.messages || [],
+    onFinish: () => {
+      // Update chat messages when response is complete
+      updateChatMessages(messages)
+    },
+  })
 
   useEffect(() => {
-    setStopFunction(stop)
+    setStopFunction(() => stop)
     return () => clearStopFunction()
   }, [stop, setStopFunction, clearStopFunction])
 
@@ -61,46 +67,68 @@ export default function Chat() {
 
     const messagesChanged =
       messages.length !== selectedChat.messages.length ||
-      messages.some(
-        (msg, index) =>
-          !selectedChat.messages[index] ||
-          msg.id !== selectedChat.messages[index].id ||
-          msg.content !== selectedChat.messages[index].content,
-      )
+      messages.some((msg, index) => {
+        const selectedMessage = selectedChat.messages[index]
+        if (!selectedMessage) return true
+        if (msg.id !== selectedMessage.id) return true
+
+        const msgText = msg.parts[0]?.type === 'text' ? msg.parts[0].text : ''
+        const selectedText =
+          selectedMessage.parts[0]?.type === 'text' ? selectedMessage.parts[0].text : ''
+
+        return msgText !== selectedText
+      })
 
     if (messagesChanged) {
       updateChatMessages(messages)
     }
-  }, [selectedChat, messages, status, setInput, updateChatMessages])
+  }, [selectedChat, messages, status, updateChatMessages])
 
   const isLoading = status === 'streaming' || status === 'submitted'
 
   const handleChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
-      updateChatInput(event.target.value)
-      handleInputChange(event)
+      const value = event.target.value
+      updateChatInput(value)
+      setInput(value)
     },
-    [updateChatInput, handleInputChange],
+    [updateChatInput],
   )
 
   const handleSendMessage = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
-      updateChatInput('')
-      handleSubmit(event)
+      event.preventDefault()
+      if (input.trim()) {
+        void sendMessage({ text: input })
+        updateChatInput('')
+        setInput('')
+      }
     },
-    [updateChatInput, handleSubmit],
+    [input, sendMessage, updateChatInput],
   )
 
   const handleSendMessageClick = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
-      handleSendMessage(event as unknown as FormEvent<HTMLFormElement>)
+      event.preventDefault()
+      if (input.trim()) {
+        void sendMessage({ text: input })
+        updateChatInput('')
+        setInput('')
+      }
     },
-    [handleSendMessage],
+    [input, sendMessage, updateChatInput],
   )
 
   return (
     <div className="overflow-hidden flex flex-col flex-1 gap-2">
-      <ChatMessages error={error} isLoading={isLoading} messages={messages} stop={stop} />
+      <ChatMessages
+        error={error}
+        isLoading={isLoading}
+        messages={messages}
+        stop={() => {
+          void stop()
+        }}
+      />
 
       <div className="flex items-center gap-2 p-2 m-2 md:mt-0 md:ml-0 max-md:mt-0 rounded-lg bg-neutral-900">
         <ChatTextarea

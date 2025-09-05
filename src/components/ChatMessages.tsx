@@ -1,6 +1,6 @@
 'use client'
 
-import type { Message } from 'ai/react'
+import type { UIMessage } from 'ai'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { PiStopFill } from 'react-icons/pi'
 import ChatMessage from './ChatMessage'
@@ -9,7 +9,7 @@ import ThreeDotsLoader from './ThreeDotsLoader'
 type Props = {
   error?: Error
   isLoading: boolean
-  messages: Message[]
+  messages: UIMessage[]
   stop: () => void
 }
 
@@ -20,10 +20,12 @@ export default function ChatMessages({ isLoading, messages, stop, error }: Props
   const errorMessage = useMemo(() => {
     if (!error) return ''
     try {
-      const errorObject = JSON.parse(error.message)
-      return errorObject.message
+      const errorObject = JSON.parse(error.message) as { message?: string }
+      return typeof errorObject.message === 'string'
+        ? errorObject.message
+        : 'An unexpected error occurred.'
     } catch {
-      return 'An unexpected error has occurred'
+      return 'An unexpected error occurred.'
     }
   }, [error])
 
@@ -52,7 +54,7 @@ export default function ChatMessages({ isLoading, messages, stop, error }: Props
       ref={ref}
       onScroll={handleScroll}
     >
-      {messages.map((message: Message) => (
+      {messages.map((message: UIMessage) => (
         <ChatMessage key={message.id} message={message} />
       ))}
 

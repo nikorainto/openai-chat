@@ -24,7 +24,12 @@ export default function ChatHistory() {
     }
 
     if (chat.messages.length) {
-      return chat.messages[chat.messages.length - 1].content
+      const lastMessage = chat.messages[chat.messages.length - 1]
+      const textContent = lastMessage.parts
+        .filter((part) => part.type === 'text')
+        .map((part) => part.text)
+        .join('')
+      return textContent || 'Chat'
     }
 
     if (chat.input) {

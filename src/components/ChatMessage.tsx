@@ -1,4 +1,4 @@
-import type { Message } from 'ai/react'
+import type { UIMessage } from 'ai'
 import React, { memo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -6,11 +6,17 @@ import CommonLayout from './CommonLayout'
 import CopyButton from './CopyButton'
 
 type Props = {
-  message: Message
+  message: UIMessage
 }
 
 function ChatMessage({ message }: Props) {
   const isBot = message.role === 'assistant'
+
+  // Extract text content from message parts
+  const textContent = message.parts
+    .filter((part) => part.type === 'text')
+    .map((part) => part.text)
+    .join('')
 
   return (
     <CommonLayout isBotMessage={isBot}>
@@ -174,7 +180,7 @@ function ChatMessage({ message }: Props) {
             ),
           }}
         >
-          {message.content}
+          {textContent}
         </ReactMarkdown>
       </div>
     </CommonLayout>
