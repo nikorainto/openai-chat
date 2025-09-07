@@ -1,18 +1,18 @@
-import type { CoreMessage } from 'ai'
+import type { ModelMessage } from 'ai'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 export type Chat = {
   id: string
   input: string
-  messages: CoreMessage[]
+  messages: ModelMessage[]
   isSelected: boolean
 }
 
 type ChatState = {
   chats: Chat[]
   updateChatInput: (input: string) => void
-  updateChatMessages: (messages: CoreMessage[]) => void
+  updateChatMessages: (messages: ModelMessage[]) => void
   updateChatSelection: (chatId: string) => void
   addChat: (chat: Chat) => void
   delChat: (chatId: string) => void

@@ -1,11 +1,11 @@
-import type { CoreMessage } from 'ai'
+import type { ModelMessage } from 'ai'
 import React, { memo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import CommonLayout from './CommonLayout'
 import CopyButton from './CopyButton'
 
-type Props = { message: CoreMessage }
+type Props = { message: ModelMessage }
 
 function ChatMessage({ message }: Props) {
   const isBot = message.role === 'assistant'

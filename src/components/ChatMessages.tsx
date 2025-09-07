@@ -1,6 +1,6 @@
 'use client'
 
-import type { CoreMessage } from 'ai'
+import type { ModelMessage } from 'ai'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { PiStopFill } from 'react-icons/pi'
 import ChatMessage from './ChatMessage'
@@ -9,7 +9,7 @@ import ThreeDotsLoader from './ThreeDotsLoader'
 type Props = {
   error?: Error
   isLoading: boolean
-  messages: CoreMessage[]
+  messages: ModelMessage[]
   stop: () => void
 }
 
@@ -59,7 +59,7 @@ export default function ChatMessages({
       ref={ref}
       onScroll={handleScroll}
     >
-      {messages.map((message: CoreMessage, index: number) => (
+      {messages.map((message: ModelMessage, index: number) => (
         <ChatMessage key={`message-${index}`} message={message} />
       ))}
 

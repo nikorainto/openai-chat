@@ -1,6 +1,6 @@
 'use client'
 
-import type { CoreMessage } from 'ai'
+import type { ModelMessage } from 'ai'
 import type { ChangeEvent, FormEvent, MouseEvent } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PiPaperPlaneRightFill } from 'react-icons/pi'
@@ -35,7 +35,7 @@ export default function Chat() {
 
   // Manual chat state management
   const [input, setInput] = useState('')
-  const [messages, setMessages] = useState<CoreMessage[]>([])
+  const [messages, setMessages] = useState<ModelMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | undefined>()
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -49,7 +49,7 @@ export default function Chat() {
   }, [])
 
   const append = useCallback(
-    async (message: CoreMessage) => {
+    async (message: ModelMessage) => {
       try {
         setIsLoading(true)
         setError(undefined)
@@ -84,7 +84,7 @@ export default function Chat() {
         let assistantMessage = ''
 
         // Add assistant message placeholder
-        const assistantMessageObj: CoreMessage = {
+        const assistantMessageObj: ModelMessage = {
           role: 'assistant',
           content: '',
         }
