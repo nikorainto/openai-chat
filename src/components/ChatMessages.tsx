@@ -60,10 +60,7 @@ export default function ChatMessages({
       onScroll={handleScroll}
     >
       {messages.map((message: CoreMessage, index: number) => (
-        <ChatMessage
-          key={`message-${index}-${JSON.stringify(message).slice(0, 50)}`}
-          message={message}
-        />
+        <ChatMessage key={`message-${index}`} message={message} />
       ))}
 
       {shouldShowBotLoadingMessage && <ThreeDotsLoader />}
