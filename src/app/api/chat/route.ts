@@ -68,7 +68,7 @@ export async function POST(req: Request) {
 
     // Prepare chat messages for OpenAI Chat Completions API
     const chatMessages = [
-      { role: 'system', content: role },
+      ...(role ? [{ role: 'system' as const, content: role }] : []),
       ...processedMessages,
     ]
 
