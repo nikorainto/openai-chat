@@ -4,11 +4,11 @@ import { useMobileMenuStore } from '@/zustand/mobileMenu'
 import { useUtilsStore } from '@/zustand/utils'
 
 export default function ChatHistory() {
-  const stopFunction = useUtilsStore((state) => state.stopFunction)
-  const chats = useChatStore((state) => state.chats)
-  const updateChatSelection = useChatStore((state) => state.updateChatSelection)
-  const delChat = useChatStore((state) => state.delChat)
-  const setIsOpen = useMobileMenuStore((state) => state.setIsOpen)
+  const stopFunction = useUtilsStore(state => state.stopFunction)
+  const chats = useChatStore(state => state.chats)
+  const updateChatSelection = useChatStore(state => state.updateChatSelection)
+  const delChat = useChatStore(state => state.delChat)
+  const setIsOpen = useMobileMenuStore(state => state.setIsOpen)
 
   const handleChatClick = (chat: Chat) => {
     if (stopFunction) {
@@ -24,7 +24,20 @@ export default function ChatHistory() {
     }
 
     if (chat.messages.length) {
-      return chat.messages[chat.messages.length - 1].content
+      const lastMessage = chat.messages[chat.messages.length - 1]
+      if (typeof lastMessage.content === 'string') {
+        return lastMessage.content
+      } else if (Array.isArray(lastMessage.content)) {
+        // Extract text from content array
+        const textParts = lastMessage.content
+          .filter(
+            (part: { type: string; text?: string }) => part.type === 'text',
+          )
+          .map((part: { type: string; text?: string }) => part.text)
+        return textParts.join(' ') || 'Message with media'
+      } else {
+        return 'Message'
+      }
     }
 
     if (chat.input) {
@@ -45,7 +58,7 @@ export default function ChatHistory() {
 
   return (
     <ul className="overflow-auto flex flex-col gap-2 border border-gray-700 rounded h-full p-1">
-      {reversedChats.map((chat) => (
+      {reversedChats.map(chat => (
         <li
           key={chat.id}
           className={`flex rounded ${chat.isSelected ? 'bg-neutral-600' : 'bg-neutral-800'}`}

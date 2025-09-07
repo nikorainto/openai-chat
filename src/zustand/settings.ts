@@ -10,11 +10,11 @@ type SettingsState = {
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
-    (set) => ({
+    set => ({
       role: '',
-      updateRole: (newRole) => set({ role: newRole }),
+      updateRole: newRole => set({ role: newRole }),
       apiKey: '',
-      updateApiKey: (newApiKey) => set({ apiKey: newApiKey }),
+      updateApiKey: newApiKey => set({ apiKey: newApiKey }),
     }),
     {
       name: 'settings',
