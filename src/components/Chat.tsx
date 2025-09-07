@@ -1,41 +1,123 @@
 'use client'
 
-import { useChat } from '@ai-sdk/react'
+import type { CoreMessage } from 'ai'
 import type { ChangeEvent, FormEvent, MouseEvent } from 'react'
-import { useEffect, useMemo, useRef, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PiPaperPlaneRightFill } from 'react-icons/pi'
 import ChatMessages from './ChatMessages'
 import ChatTextarea from './ChatTextarea'
+import ImagePreview from './ImagePreview'
+import ImageUpload, { type ImageAttachment } from './ImageUpload'
 import { useChatStore } from '@/zustand/chats'
 import { useModelStore } from '@/zustand/models'
 import { useSettingsStore } from '@/zustand/settings'
 import { useUtilsStore } from '@/zustand/utils'
 
 export default function Chat() {
-  const chats = useChatStore((state) => state.chats)
-  const updateChatInput = useChatStore((state) => state.updateChatInput)
-  const updateChatMessages = useChatStore((state) => state.updateChatMessages)
-  const models = useModelStore((state) => state.models)
-  const selectedChat = useMemo(() => chats.find((chat) => chat.isSelected), [chats])
-  const selectedModel = useMemo(() => models.find((model) => model.isSelected), [models])
-  const role = useSettingsStore((state) => state.role)
-  const apiKey = useSettingsStore((state) => state.apiKey)
-  const setStopFunction = useUtilsStore((state) => state.setStopFunction)
-  const clearStopFunction = useUtilsStore((state) => state.clearStopFunction)
+  const chats = useChatStore(state => state.chats)
+  const updateChatInput = useChatStore(state => state.updateChatInput)
+  const updateChatMessages = useChatStore(state => state.updateChatMessages)
+  const models = useModelStore(state => state.models)
+  const selectedChat = useMemo(
+    () => chats.find(chat => chat.isSelected),
+    [chats],
+  )
+  const selectedModel = useMemo(
+    () => models.find(model => model.isSelected),
+    [models],
+  )
+  const role = useSettingsStore(state => state.role)
+  const apiKey = useSettingsStore(state => state.apiKey)
+  const setStopFunction = useUtilsStore(state => state.setStopFunction)
+  const clearStopFunction = useUtilsStore(state => state.clearStopFunction)
   const currentChatIdRef = useRef<string | undefined>(undefined)
+  const [images, setImages] = useState<ImageAttachment[]>([])
 
-  const { error, handleInputChange, handleSubmit, input, status, messages, stop, setInput } =
-    useChat({
-      id: selectedChat?.id,
-      api: '/api/chat',
-      initialInput: selectedChat?.input || '',
-      initialMessages: selectedChat?.messages || [],
-      body: {
-        model: selectedModel?.name,
-        role,
-        apiKey,
-      },
-    })
+  // Manual chat state management
+  const [input, setInput] = useState('')
+  const [messages, setMessages] = useState<CoreMessage[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | undefined>()
+  const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Stop function
+  const stop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      setIsLoading(false)
+    }
+  }, [])
+
+  const append = useCallback(
+    async (message: CoreMessage) => {
+      try {
+        setIsLoading(true)
+        setError(undefined)
+
+        const newMessages = [...messages, message]
+        setMessages(newMessages)
+
+        abortControllerRef.current = new AbortController()
+
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: newMessages,
+            model: selectedModel?.name,
+            role,
+            apiKey,
+          }),
+          signal: abortControllerRef.current.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const reader = response.body?.getReader()
+        if (!reader) {
+          throw new Error('No response body')
+        }
+
+        const decoder = new TextDecoder()
+        let assistantMessage = ''
+
+        // Add assistant message placeholder
+        const assistantMessageObj: CoreMessage = {
+          role: 'assistant',
+          content: '',
+        }
+        setMessages([...newMessages, assistantMessageObj])
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = decoder.decode(value, { stream: true })
+            assistantMessage += chunk
+
+            // Update the last message (assistant message)
+            setMessages([
+              ...newMessages,
+              { ...assistantMessageObj, content: assistantMessage },
+            ])
+          }
+        } finally {
+          reader.releaseLock()
+        }
+
+        setIsLoading(false)
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          setError(err)
+        }
+        setIsLoading(false)
+      }
+    },
+    [messages, selectedModel, role, apiKey],
+  )
 
   useEffect(() => {
     setStopFunction(stop)
@@ -51,11 +133,13 @@ export default function Chat() {
 
     if (chatSwitched) {
       setInput(selectedChat.input || '')
+      setMessages(selectedChat.messages || [])
+      setImages([]) // Clear images when switching chats
       currentChatIdRef.current = selectedChat.id
       return
     }
 
-    if (status === 'streaming' || messages.length === 0) {
+    if (isLoading || messages.length === 0) {
       return
     }
 
@@ -64,31 +148,81 @@ export default function Chat() {
       messages.some(
         (msg, index) =>
           !selectedChat.messages[index] ||
-          msg.id !== selectedChat.messages[index].id ||
-          msg.content !== selectedChat.messages[index].content,
+          JSON.stringify(msg) !== JSON.stringify(selectedChat.messages[index]),
       )
 
     if (messagesChanged) {
       updateChatMessages(messages)
     }
-  }, [selectedChat, messages, status, setInput, updateChatMessages])
-
-  const isLoading = status === 'streaming' || status === 'submitted'
+  }, [selectedChat, messages, isLoading, updateChatMessages])
 
   const handleChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
       updateChatInput(event.target.value)
-      handleInputChange(event)
+      setInput(event.target.value)
     },
-    [updateChatInput, handleInputChange],
+    [updateChatInput],
   )
 
   const handleSendMessage = useCallback(
-    (event: FormEvent<HTMLFormElement>) => {
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+
+      if (!input.trim() && images.length === 0) {
+        return
+      }
+
+      // Check if the selected model supports vision
+      // GPT-5 supports vision capabilities
+      const visionSupportedModels = ['gpt-5']
+      const supportsVision = visionSupportedModels.includes(
+        selectedModel?.name || '',
+      )
+
+      if (images.length > 0 && !supportsVision) {
+        alert(`Image uploads are only supported with vision-capable models.
+        
+Your current model: ${selectedModel?.name}
+Supported models: ${visionSupportedModels.join(', ')}
+        
+Please select a compatible model from the dropdown menu to use image functionality.`)
+        return
+      }
+
+      // Create content array for multimodal message
+      const content: Array<{ type: string; text?: string; image?: string }> = []
+
+      if (input.trim()) {
+        content.push({ type: 'text', text: input.trim() })
+      }
+
+      if (images.length > 0) {
+        images.forEach(image => {
+          content.push({
+            type: 'image',
+            image: `data:${image.file.type};base64,${image.base64}`,
+          })
+        })
+      }
+
+      // Clear input and images
       updateChatInput('')
-      handleSubmit(event)
+      setInput('')
+
+      // Clean up image URLs
+      images.forEach(image => URL.revokeObjectURL(image.url))
+      setImages([])
+
+      // Send message with content array
+      await append({
+        role: 'user',
+        content:
+          content.length === 1 && content[0].type === 'text'
+            ? content[0].text!
+            : JSON.stringify(content),
+      })
     },
-    [updateChatInput, handleSubmit],
+    [input, images, selectedModel, updateChatInput, append],
   )
 
   const handleSendMessageClick = useCallback(
@@ -98,24 +232,50 @@ export default function Chat() {
     [handleSendMessage],
   )
 
+  const handleImagesChange = useCallback((newImages: ImageAttachment[]) => {
+    setImages(newImages)
+  }, [])
+
   return (
     <div className="overflow-hidden flex flex-col flex-1 gap-2">
-      <ChatMessages error={error} isLoading={isLoading} messages={messages} stop={stop} />
+      <ChatMessages
+        error={error}
+        isLoading={isLoading}
+        messages={messages}
+        stop={stop}
+      />
 
-      <div className="flex items-center gap-2 p-2 m-2 md:mt-0 md:ml-0 max-md:mt-0 rounded-lg bg-neutral-900">
-        <ChatTextarea
-          selectedChatId={selectedChat?.id}
-          input={input}
-          onChange={handleChange}
-          onSendMessage={handleSendMessage}
+      <div className="p-1 m-1 md:mt-0 md:ml-0 max-md:mt-0">
+        <ImagePreview
+          images={images}
+          onImagesChange={handleImagesChange}
+          disabled={isLoading}
         />
-        <button
-          aria-label="send message"
-          className="flex items-center justify-center p-4 rounded-full bg-green-500"
-          onClick={handleSendMessageClick}
-        >
-          <PiPaperPlaneRightFill className="text-xl" />
-        </button>
+
+        <div className="flex items-center gap-1 rounded-lg bg-neutral-900 p-1">
+          <ChatTextarea
+            selectedChatId={selectedChat?.id}
+            input={input}
+            onChange={handleChange}
+            onSendMessage={handleSendMessage}
+            images={images}
+            onImagesChange={handleImagesChange}
+            disabled={isLoading}
+          />
+          <ImageUpload
+            images={images}
+            onImagesChange={handleImagesChange}
+            disabled={isLoading}
+          />
+          <button
+            aria-label="send message"
+            className="flex items-center justify-center p-2 rounded-full bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed flex-shrink-0"
+            onClick={handleSendMessageClick}
+            disabled={isLoading || (!input.trim() && images.length === 0)}
+          >
+            <PiPaperPlaneRightFill className="text-lg" />
+          </button>
+        </div>
       </div>
     </div>
   )

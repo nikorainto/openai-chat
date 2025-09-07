@@ -8,14 +8,16 @@ type Props = {
 }
 
 export default function ModelSelect({ instanceId }: Props) {
-  const models = useModelStore((state) => state.models)
-  const updateModelSelection = useModelStore((state) => state.updateModelSelection)
+  const models = useModelStore(state => state.models)
+  const updateModelSelection = useModelStore(
+    state => state.updateModelSelection,
+  )
 
-  const options = models.map((model) => ({
+  const options = models.map(model => ({
     value: model.name,
     label: model.name.toUpperCase(),
   }))
-  const selectedModel = models.find((model) => model.isSelected)
+  const selectedModel = models.find(model => model.isSelected)
 
   const handleChange = (newValue: SingleValue<(typeof options)[number]>) => {
     if (newValue) {
@@ -34,7 +36,7 @@ export default function ModelSelect({ instanceId }: Props) {
       }}
       instanceId={instanceId}
       options={options}
-      value={options.find((option) => option.value === selectedModel?.name)}
+      value={options.find(option => option.value === selectedModel?.name)}
       onChange={handleChange}
     />
   )

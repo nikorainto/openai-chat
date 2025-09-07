@@ -5,10 +5,10 @@ import Modal from './Modal'
 import { useSettingsStore } from '@/zustand/settings'
 
 export default function SettingsModal() {
-  const previousRole = useSettingsStore((state) => state.role)
-  const updateRole = useSettingsStore((state) => state.updateRole)
-  const previousApiKey = useSettingsStore((state) => state.apiKey)
-  const updateApiKey = useSettingsStore((state) => state.updateApiKey)
+  const previousRole = useSettingsStore(state => state.role)
+  const updateRole = useSettingsStore(state => state.updateRole)
+  const previousApiKey = useSettingsStore(state => state.apiKey)
+  const updateApiKey = useSettingsStore(state => state.updateApiKey)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [role, setRole] = useState(previousRole)
@@ -51,7 +51,10 @@ export default function SettingsModal() {
       <Modal isOpen={modalOpen} onClose={handleCloseModal}>
         <div className="flex flex-col gap-4">
           <div>
-            <label htmlFor="message" className="block mb-2 text-sm font-medium text-gray-200">
+            <label
+              htmlFor="message"
+              className="block mb-2 text-sm font-medium text-gray-200"
+            >
               Give bot a role
             </label>
             <label className="block mb-2 text-xs font-medium text-gray-500">
@@ -67,7 +70,10 @@ export default function SettingsModal() {
             ></textarea>
           </div>
           <div>
-            <label htmlFor="api-key" className="block mb-2 text-sm font-medium text-gray-200">
+            <label
+              htmlFor="api-key"
+              className="block mb-2 text-sm font-medium text-gray-200"
+            >
               OpenAI API key
             </label>
             <label className="block mb-2 text-xs font-medium text-gray-500">

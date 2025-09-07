@@ -5,7 +5,7 @@ type MobileMenuState = {
   setIsOpen: (isOpen: boolean) => void
 }
 
-export const useMobileMenuStore = create<MobileMenuState>((set) => ({
+export const useMobileMenuStore = create<MobileMenuState>(set => ({
   isOpen: false,
-  setIsOpen: (isOpen) => set({ isOpen }),
+  setIsOpen: isOpen => set({ isOpen }),
 }))

@@ -1,6 +1,6 @@
 'use client'
 
-import type { Message } from 'ai/react'
+import type { CoreMessage } from 'ai'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { PiStopFill } from 'react-icons/pi'
 import ChatMessage from './ChatMessage'
@@ -9,11 +9,16 @@ import ThreeDotsLoader from './ThreeDotsLoader'
 type Props = {
   error?: Error
   isLoading: boolean
-  messages: Message[]
+  messages: CoreMessage[]
   stop: () => void
 }
 
-export default function ChatMessages({ isLoading, messages, stop, error }: Props) {
+export default function ChatMessages({
+  isLoading,
+  messages,
+  stop,
+  error,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true)
 
@@ -38,13 +43,15 @@ export default function ChatMessages({ isLoading, messages, stop, error }: Props
   const handleScroll = useCallback(() => {
     if (ref.current) {
       const isAtBottom =
-        ref.current.scrollTop + ref.current.clientHeight === ref.current.scrollHeight
+        ref.current.scrollTop + ref.current.clientHeight ===
+        ref.current.scrollHeight
       setShouldScrollToBottom(isAtBottom)
     }
   }, [])
 
   const lastMessage = messages?.[messages.length - 1]
-  const shouldShowBotLoadingMessage = isLoading && lastMessage && lastMessage.role === 'user'
+  const shouldShowBotLoadingMessage =
+    isLoading && lastMessage && lastMessage.role === 'user'
 
   return (
     <div
@@ -52,8 +59,11 @@ export default function ChatMessages({ isLoading, messages, stop, error }: Props
       ref={ref}
       onScroll={handleScroll}
     >
-      {messages.map((message: Message) => (
-        <ChatMessage key={message.id} message={message} />
+      {messages.map((message: CoreMessage, index: number) => (
+        <ChatMessage
+          key={`message-${index}-${JSON.stringify(message).slice(0, 50)}`}
+          message={message}
+        />
       ))}
 
       {shouldShowBotLoadingMessage && <ThreeDotsLoader />}
@@ -70,7 +80,9 @@ export default function ChatMessages({ isLoading, messages, stop, error }: Props
               <p className="text-sm">Stop</p>
             </button>
           )}
-          {errorMessage && <p className="text-center text-red-500">{errorMessage}</p>}
+          {errorMessage && (
+            <p className="text-center text-red-500">{errorMessage}</p>
+          )}
         </div>
       )}
     </div>

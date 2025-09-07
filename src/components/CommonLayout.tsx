@@ -5,7 +5,10 @@ type CommonLayoutProps = {
   children: React.ReactNode
 }
 
-export default function CommonLayout({ isBotMessage, children }: CommonLayoutProps) {
+export default function CommonLayout({
+  isBotMessage,
+  children,
+}: CommonLayoutProps) {
   const bgColor = isBotMessage ? 'bg-neutral-700' : 'bg-neutral-800'
   const alignSelf = isBotMessage ? 'md:self-start' : 'md:self-end'
 
