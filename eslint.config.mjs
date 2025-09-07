@@ -18,8 +18,6 @@ export default [
       'next-env.d.ts',
     ],
   },
-  pluginJs.configs.recommended,
-  ...tseslint.configs.recommended,
   {
     plugins: {
       import: importOrder,
@@ -44,4 +42,6 @@ export default [
       '@next/next/no-page-custom-font': 'error',
     },
   },
+  pluginJs.configs.recommended,
+  ...tseslint.configs.recommended,
 ]
