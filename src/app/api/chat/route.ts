@@ -103,17 +103,19 @@ export async function POST(req: Request) {
 
     // Create a proper streaming response that the frontend can handle
     const encoder = new TextEncoder()
+    const chunkSize = 5 // Increased chunk size for better performance
+    const streamDelay = 8 // Reduced delay for faster streaming
+
     const stream = new ReadableStream({
       async start(controller) {
         // Stream the response text in small chunks for a natural typing effect
-        const chunkSize = 3
         for (let i = 0; i < responseText.length; i += chunkSize) {
           const chunk = responseText.slice(i, i + chunkSize)
           controller.enqueue(encoder.encode(chunk))
 
-          // Add a small delay between chunks (Edge Runtime compatible)
+          // Add a minimal delay between chunks (Edge Runtime compatible)
           if (i + chunkSize < responseText.length) {
-            await new Promise(resolve => setTimeout(resolve, 30))
+            await new Promise(resolve => setTimeout(resolve, streamDelay))
           }
         }
         controller.close()

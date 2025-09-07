@@ -9,6 +9,7 @@ import {
   type KeyboardEvent,
   type ClipboardEvent,
 } from 'react'
+import { convertFileToBase64 } from '../utils/fileUtils'
 import type { ImageAttachment } from './ImageUpload'
 
 type Props = {
@@ -112,18 +113,6 @@ export default function ChatTextarea({
 
       onImagesChange([...images, ...newImages])
     }
-  }
-
-  const convertFileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const result = reader.result as string
-        resolve(result.split(',')[1]) // Remove data:image/...;base64, prefix
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
   }
 
   return (

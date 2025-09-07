@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { PiImageBold, PiSpinnerBold } from 'react-icons/pi'
+import { convertFileToBase64 } from '../utils/fileUtils'
 
 export interface ImageAttachment {
   file: File
@@ -22,18 +23,6 @@ export default function ImageUpload({
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isProcessing, setIsProcessing] = useState(false)
-
-  const convertFileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const result = reader.result as string
-        resolve(result.split(',')[1]) // Remove data:image/...;base64, prefix
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-  }
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || disabled) return
