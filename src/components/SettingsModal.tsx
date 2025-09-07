@@ -7,6 +7,7 @@ import { useSettingsStore } from '@/zustand/settings'
 export default function SettingsModal() {
   const previousRole = useSettingsStore(state => state.role)
   const updateRole = useSettingsStore(state => state.updateRole)
+  const resetToDefault = useSettingsStore(state => state.resetToDefault)
   const previousApiKey = useSettingsStore(state => state.apiKey)
   const updateApiKey = useSettingsStore(state => state.updateApiKey)
 
@@ -25,6 +26,11 @@ export default function SettingsModal() {
   const handleChangeApiKey = (event: ChangeEvent<HTMLInputElement>) => {
     const newValue = event.target.value
     setApiKey(newValue)
+  }
+
+  const handleResetToDefault = () => {
+    resetToDefault()
+    setRole(useSettingsStore.getState().role) // Update local state to reflect the reset
   }
 
   const handleCancel = () => {
@@ -57,9 +63,18 @@ export default function SettingsModal() {
             >
               Give bot a role
             </label>
-            <label className="block mb-2 text-xs font-medium text-gray-500">
-              Given role will affect all new chats from now on
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-medium text-gray-500">
+                Given role will affect all new chats from now on
+              </label>
+              <button
+                type="button"
+                className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
+                onClick={handleResetToDefault}
+              >
+                Reset to default
+              </button>
+            </div>
             <textarea
               id="message"
               rows={4}

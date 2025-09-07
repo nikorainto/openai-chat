@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import type { ModelMessage } from 'ai'
 import React, { memo } from 'react'
 import ReactMarkdown from 'react-markdown'
