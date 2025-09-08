@@ -9,7 +9,7 @@ import {
   type KeyboardEvent,
   type ClipboardEvent,
 } from 'react'
-import { convertFileToBase64 } from '../utils/fileUtils'
+import { uploadImageToBlob } from '../utils/blobStorage'
 import type { ImageAttachment } from './ImageUpload'
 
 type Props = {
@@ -103,15 +103,43 @@ export default function ChatTextarea({
 
       for (const file of imageFiles) {
         try {
-          const base64 = await convertFileToBase64(file)
           const url = URL.createObjectURL(file)
-          newImages.push({ file, url, base64 })
+          const imageAttachment: ImageAttachment = {
+            file,
+            url,
+            isUploading: true,
+          }
+          newImages.push(imageAttachment)
         } catch (error) {
-          console.error('Error converting pasted image:', error)
+          console.error('Error processing pasted image:', error)
         }
       }
 
-      onImagesChange([...images, ...newImages])
+      // Add images with uploading state first
+      const updatedImages = [...images, ...newImages]
+      onImagesChange(updatedImages)
+
+      // Upload images to blob storage
+      for (let i = 0; i < newImages.length; i++) {
+        try {
+          const blobData = await uploadImageToBlob(newImages[i].file)
+          const imageIndex = images.length + i
+          const finalImages = [...updatedImages]
+          finalImages[imageIndex] = {
+            ...finalImages[imageIndex],
+            blobData,
+            isUploading: false,
+          }
+          onImagesChange(finalImages)
+        } catch (error) {
+          console.error('Error uploading pasted image:', error)
+          // Remove the failed image
+          const imageIndex = images.length + i
+          const finalImages = [...updatedImages]
+          finalImages.splice(imageIndex, 1)
+          onImagesChange(finalImages)
+        }
+      }
     }
   }
 

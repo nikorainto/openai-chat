@@ -32,6 +32,7 @@ export default function Chat() {
   const clearStopFunction = useUtilsStore(state => state.clearStopFunction)
   const currentChatIdRef = useRef<string | undefined>(undefined)
   const [images, setImages] = useState<ImageAttachment[]>([])
+  const [isUploadingImages, setIsUploadingImages] = useState(false)
 
   // Manual chat state management
   const [input, setInput] = useState('')
@@ -172,9 +173,16 @@ export default function Chat() {
         return
       }
 
+      // Check if any images are still uploading
+      const hasUploadingImages = images.some(img => img.isUploading)
+      if (hasUploadingImages) {
+        alert('Please wait for images to finish uploading before sending.')
+        return
+      }
+
       // Check if the selected model supports vision
-      // GPT-5 supports vision capabilities
-      const visionSupportedModels = ['gpt-5']
+      // GPT-4.1 support vision capabilities
+      const visionSupportedModels = ['gpt-4.1']
       const supportsVision = visionSupportedModels.includes(
         selectedModel?.name || '',
       )
@@ -198,10 +206,12 @@ Please select a compatible model from the dropdown menu to use image functionali
 
       if (images.length > 0) {
         images.forEach(image => {
-          content.push({
-            type: 'image',
-            image: `data:${image.file.type};base64,${image.base64}`,
-          })
+          if (image.blobData?.url) {
+            content.push({
+              type: 'image',
+              image: image.blobData.url,
+            })
+          }
         })
       }
 
@@ -236,6 +246,16 @@ Please select a compatible model from the dropdown menu to use image functionali
     setImages(newImages)
   }, [])
 
+  const handleUploadStateChange = useCallback((uploading: boolean) => {
+    setIsUploadingImages(uploading)
+  }, [])
+
+  // Check if any images are still uploading or if we're in upload state
+  const hasUploadingImages =
+    images.some(img => img.isUploading) || isUploadingImages
+  const isSubmitDisabled =
+    isLoading || hasUploadingImages || (!input.trim() && images.length === 0)
+
   return (
     <div className="overflow-hidden flex flex-col flex-1 gap-2">
       <ChatMessages
@@ -265,13 +285,14 @@ Please select a compatible model from the dropdown menu to use image functionali
           <ImageUpload
             images={images}
             onImagesChange={handleImagesChange}
+            onUploadStateChange={handleUploadStateChange}
             disabled={isLoading}
           />
           <button
             aria-label="send message"
             className="flex items-center justify-center p-2 rounded-full bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed flex-shrink-0"
             onClick={handleSendMessageClick}
-            disabled={isLoading || (!input.trim() && images.length === 0)}
+            disabled={isSubmitDisabled}
           >
             <PiPaperPlaneRightFill className="text-lg" />
           </button>

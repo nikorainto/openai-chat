@@ -1,1 +1,3 @@
-export const MODELS = { gpt5: 'gpt-5' }
+export const MODELS = {
+  gpt4_1: 'gpt-4.1',
+}

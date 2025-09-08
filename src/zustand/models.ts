@@ -12,7 +12,7 @@ type ModelsState = {
 export const useModelStore = create<ModelsState>()(
   persist(
     (set, get) => ({
-      models: [{ name: MODELS.gpt5, isSelected: true }],
+      models: [{ name: MODELS.gpt4_1, isSelected: true }],
       updateModelSelection: modelName =>
         set({
           models: get().models.map(model => ({
