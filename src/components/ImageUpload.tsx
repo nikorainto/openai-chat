@@ -118,7 +118,7 @@ export default function ImageUpload({
       <button
         onClick={handleClick}
         disabled={disabled || isProcessing}
-        className={`flex items-center justify-center p-2 rounded-full transition-colors flex-shrink-0 ${
+        className={`flex items-center justify-center p-3 rounded-full transition-colors flex-shrink-0 min-w-[48px] min-h-[48px] ${
           disabled || isProcessing
             ? 'text-neutral-500 cursor-not-allowed bg-gray-600'
             : images.length > 0
@@ -135,9 +135,9 @@ export default function ImageUpload({
         }
       >
         {isProcessing || hasUploadingImages ? (
-          <PiSpinnerBold className="text-lg animate-spin" />
+          <PiSpinnerBold className="text-xl animate-spin" />
         ) : (
-          <PiImageBold className="text-lg" />
+          <PiImageBold className="text-xl" />
         )}
       </button>
     </>

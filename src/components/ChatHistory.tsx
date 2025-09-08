@@ -75,7 +75,7 @@ export default function ChatHistory() {
           </button>
           <button
             aria-label="remove chat"
-            className="flex items-center p-4 rounded-r bg-neutral-700 active:text-red-200"
+            className="flex items-center p-4 rounded-r bg-neutral-700 active:text-red-200 hover:cursor-pointer"
             onClick={() => handleDelChat(chat.id)}
           >
             <PiTrashBold className="shrink-0" />
