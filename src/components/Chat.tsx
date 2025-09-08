@@ -31,7 +31,9 @@ export default function Chat() {
   const setStopFunction = useUtilsStore(state => state.setStopFunction)
   const clearStopFunction = useUtilsStore(state => state.clearStopFunction)
   const currentChatIdRef = useRef<string | undefined>(undefined)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [images, setImages] = useState<ImageAttachment[]>([])
+  const [isUploadingImages, setIsUploadingImages] = useState(false)
 
   // Manual chat state management
   const [input, setInput] = useState('')
@@ -172,9 +174,16 @@ export default function Chat() {
         return
       }
 
+      // Check if any images are still uploading
+      const hasUploadingImages = images.some(img => img.isUploading)
+      if (hasUploadingImages) {
+        alert('Please wait for images to finish uploading before sending.')
+        return
+      }
+
       // Check if the selected model supports vision
-      // GPT-5 supports vision capabilities
-      const visionSupportedModels = ['gpt-5']
+      // GPT-4.1 support vision capabilities
+      const visionSupportedModels = ['gpt-4.1']
       const supportsVision = visionSupportedModels.includes(
         selectedModel?.name || '',
       )
@@ -198,10 +207,12 @@ Please select a compatible model from the dropdown menu to use image functionali
 
       if (images.length > 0) {
         images.forEach(image => {
-          content.push({
-            type: 'image',
-            image: `data:${image.file.type};base64,${image.base64}`,
-          })
+          if (image.blobData?.url) {
+            content.push({
+              type: 'image',
+              image: image.blobData.url,
+            })
+          }
         })
       }
 
@@ -221,6 +232,11 @@ Please select a compatible model from the dropdown menu to use image functionali
             ? content[0].text!
             : JSON.stringify(content),
       })
+
+      // Refocus the textarea after message is sent
+      setTimeout(() => {
+        textareaRef.current?.focus()
+      }, 100)
     },
     [input, images, selectedModel, updateChatInput, append],
   )
@@ -235,6 +251,16 @@ Please select a compatible model from the dropdown menu to use image functionali
   const handleImagesChange = useCallback((newImages: ImageAttachment[]) => {
     setImages(newImages)
   }, [])
+
+  const handleUploadStateChange = useCallback((uploading: boolean) => {
+    setIsUploadingImages(uploading)
+  }, [])
+
+  // Check if any images are still uploading or if we're in upload state
+  const hasUploadingImages =
+    images.some(img => img.isUploading) || isUploadingImages
+  const isSubmitDisabled =
+    isLoading || hasUploadingImages || (!input.trim() && images.length === 0)
 
   return (
     <div className="overflow-hidden flex flex-col flex-1 gap-2">
@@ -252,8 +278,9 @@ Please select a compatible model from the dropdown menu to use image functionali
           disabled={isLoading}
         />
 
-        <div className="flex items-center gap-1 rounded-lg bg-neutral-900 p-1">
+        <div className="flex items-center gap-1 rounded-lg bg-neutral-900 p-1 pr-3">
           <ChatTextarea
+            ref={textareaRef}
             selectedChatId={selectedChat?.id}
             input={input}
             onChange={handleChange}
@@ -262,19 +289,22 @@ Please select a compatible model from the dropdown menu to use image functionali
             onImagesChange={handleImagesChange}
             disabled={isLoading}
           />
-          <ImageUpload
-            images={images}
-            onImagesChange={handleImagesChange}
-            disabled={isLoading}
-          />
-          <button
-            aria-label="send message"
-            className="flex items-center justify-center p-2 rounded-full bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed flex-shrink-0"
-            onClick={handleSendMessageClick}
-            disabled={isLoading || (!input.trim() && images.length === 0)}
-          >
-            <PiPaperPlaneRightFill className="text-lg" />
-          </button>
+          <div className="flex items-center gap-1">
+            <ImageUpload
+              images={images}
+              onImagesChange={handleImagesChange}
+              onUploadStateChange={handleUploadStateChange}
+              disabled={isLoading}
+            />
+            <button
+              aria-label="send message"
+              className="flex items-center justify-center p-3 rounded-full bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed flex-shrink-0 min-w-[48px] min-h-[48px]"
+              onClick={handleSendMessageClick}
+              disabled={isSubmitDisabled}
+            >
+              <PiPaperPlaneRightFill className="text-xl" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

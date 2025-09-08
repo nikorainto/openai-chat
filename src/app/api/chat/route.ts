@@ -1,3 +1,5 @@
+import { createOpenAI } from '@ai-sdk/openai'
+import { streamText } from 'ai'
 import type { ModelMessage } from 'ai'
 import { NextResponse } from 'next/server'
 
@@ -15,12 +17,10 @@ function processMessage(message: ModelMessage): ModelMessage {
           if (item.type === 'text') {
             return { type: 'text', text: item.text }
           } else if (item.type === 'image') {
-            // Convert to the format expected by Chat Completions API
+            // For Vercel AI SDK, use the URL directly
             return {
-              type: 'image_url',
-              image_url: {
-                url: item.image,
-              },
+              type: 'image',
+              image: item.image,
             }
           }
           return item
@@ -63,70 +63,22 @@ export async function POST(req: Request) {
       )
     }
 
+    const openai = createOpenAI({
+      apiKey: key,
+    })
+
     // Process messages to handle multimodal content
     const processedMessages = messages.map(processMessage)
 
-    // Prepare chat messages for OpenAI Chat Completions API
-    const chatMessages = [
-      ...(role ? [{ role: 'system' as const, content: role }] : []),
-      ...processedMessages,
-    ]
-
-    // Use OpenAI Chat Completions API
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: chatMessages,
-        stream: false,
-      }),
+    const result = streamText({
+      model: openai(model),
+      messages: [
+        ...(role ? [{ role: 'system' as const, content: role }] : []),
+        ...processedMessages,
+      ],
     })
 
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('❌ OpenAI API error:', error)
-      return NextResponse.json(
-        { error: `OpenAI API error: ${response.status} - ${error}` },
-        { status: response.status },
-      )
-    }
-
-    const data = await response.json()
-
-    // Get the response text from Chat Completions API
-    const responseText =
-      data.choices?.[0]?.message?.content || 'No response received'
-
-    // Create a proper streaming response that the frontend can handle
-    const encoder = new TextEncoder()
-    const chunkSize = 5 // Increased chunk size for better performance
-    const streamDelay = 8 // Reduced delay for faster streaming
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        // Stream the response text in small chunks for a natural typing effect
-        for (let i = 0; i < responseText.length; i += chunkSize) {
-          const chunk = responseText.slice(i, i + chunkSize)
-          controller.enqueue(encoder.encode(chunk))
-
-          // Add a minimal delay between chunks (Edge Runtime compatible)
-          if (i + chunkSize < responseText.length) {
-            await new Promise(resolve => setTimeout(resolve, streamDelay))
-          }
-        }
-        controller.close()
-      },
-    })
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-      },
-    })
+    return result.toTextStreamResponse()
   } catch (error) {
     console.error('Chat API error:', error)
     return NextResponse.json(

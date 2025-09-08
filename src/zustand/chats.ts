@@ -1,6 +1,10 @@
 import type { ModelMessage } from 'ai'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import {
+  extractImageUrlsFromMessages,
+  deleteImageFromBlob,
+} from '@/utils/blobStorage'
 
 export type Chat = {
   id: string
@@ -55,7 +59,19 @@ export const useChatStore = create<ChatState>()(
             chat,
           ],
         }),
-      delChat: chatId =>
+      delChat: chatId => {
+        // Find the chat being deleted and extract image URLs for cleanup
+        const chatToDelete = get().chats.find(chat => chat.id === chatId)
+        if (chatToDelete) {
+          const imageUrls = extractImageUrlsFromMessages(chatToDelete.messages)
+          // Clean up blob images asynchronously
+          imageUrls.forEach(url => {
+            deleteImageFromBlob(url).catch(error => {
+              console.error('Failed to delete image from blob storage:', error)
+            })
+          })
+        }
+
         set({
           chats:
             get().chats.length === 1
@@ -66,7 +82,8 @@ export const useChatStore = create<ChatState>()(
                     ...chat,
                     isSelected: index === self.length - 1,
                   })),
-        }),
+        })
+      },
     }),
     { name: 'chats' },
   ),
