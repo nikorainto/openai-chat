@@ -9,9 +9,9 @@ type UtilsState = {
 
 export const useUtilsStore = create<UtilsState>()(
   persist(
-    (set) => ({
+    set => ({
       stopFunction: null,
-      setStopFunction: (stopFunc) => set({ stopFunction: stopFunc }),
+      setStopFunction: stopFunc => set({ stopFunction: stopFunc }),
       clearStopFunction: () => set({ stopFunction: null }),
     }),
     {

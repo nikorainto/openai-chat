@@ -13,16 +13,22 @@ import { useSettingsStore } from '@/zustand/settings'
 import { useUtilsStore } from '@/zustand/utils'
 
 export default function Chat() {
-  const chats = useChatStore((state) => state.chats)
-  const updateChatInput = useChatStore((state) => state.updateChatInput)
-  const updateChatMessages = useChatStore((state) => state.updateChatMessages)
-  const models = useModelStore((state) => state.models)
-  const selectedChat = useMemo(() => chats.find((chat) => chat.isSelected), [chats])
-  const selectedModel = useMemo(() => models.find((model) => model.isSelected), [models])
-  const role = useSettingsStore((state) => state.role)
-  const apiKey = useSettingsStore((state) => state.apiKey)
-  const setStopFunction = useUtilsStore((state) => state.setStopFunction)
-  const clearStopFunction = useUtilsStore((state) => state.clearStopFunction)
+  const chats = useChatStore(state => state.chats)
+  const updateChatInput = useChatStore(state => state.updateChatInput)
+  const updateChatMessages = useChatStore(state => state.updateChatMessages)
+  const models = useModelStore(state => state.models)
+  const selectedChat = useMemo(
+    () => chats.find(chat => chat.isSelected),
+    [chats],
+  )
+  const selectedModel = useMemo(
+    () => models.find(model => model.isSelected),
+    [models],
+  )
+  const role = useSettingsStore(state => state.role)
+  const apiKey = useSettingsStore(state => state.apiKey)
+  const setStopFunction = useUtilsStore(state => state.setStopFunction)
+  const clearStopFunction = useUtilsStore(state => state.clearStopFunction)
   const currentChatIdRef = useRef<string | undefined>(undefined)
   const [input, setInput] = useState('')
 
@@ -74,7 +80,9 @@ export default function Chat() {
 
         const msgText = msg.parts[0]?.type === 'text' ? msg.parts[0].text : ''
         const selectedText =
-          selectedMessage.parts[0]?.type === 'text' ? selectedMessage.parts[0].text : ''
+          selectedMessage.parts[0]?.type === 'text'
+            ? selectedMessage.parts[0].text
+            : ''
 
         return msgText !== selectedText
       })

@@ -13,7 +13,12 @@ type Props = {
   stop: () => void
 }
 
-export default function ChatMessages({ isLoading, messages, stop, error }: Props) {
+export default function ChatMessages({
+  isLoading,
+  messages,
+  stop,
+  error,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true)
 
@@ -40,13 +45,15 @@ export default function ChatMessages({ isLoading, messages, stop, error }: Props
   const handleScroll = useCallback(() => {
     if (ref.current) {
       const isAtBottom =
-        ref.current.scrollTop + ref.current.clientHeight === ref.current.scrollHeight
+        ref.current.scrollTop + ref.current.clientHeight ===
+        ref.current.scrollHeight
       setShouldScrollToBottom(isAtBottom)
     }
   }, [])
 
   const lastMessage = messages?.[messages.length - 1]
-  const shouldShowBotLoadingMessage = isLoading && lastMessage && lastMessage.role === 'user'
+  const shouldShowBotLoadingMessage =
+    isLoading && lastMessage && lastMessage.role === 'user'
 
   return (
     <div
@@ -72,7 +79,9 @@ export default function ChatMessages({ isLoading, messages, stop, error }: Props
               <p className="text-sm">Stop</p>
             </button>
           )}
-          {errorMessage && <p className="text-center text-red-500">{errorMessage}</p>}
+          {errorMessage && (
+            <p className="text-center text-red-500">{errorMessage}</p>
+          )}
         </div>
       )}
     </div>

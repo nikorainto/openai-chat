@@ -21,9 +21,9 @@ export const useModelStore = create<ModelsState>()(
         { name: MODELS.gpt41, isSelected: false },
         { name: MODELS.gpt5, isSelected: true },
       ],
-      updateModelSelection: (modelName) =>
+      updateModelSelection: modelName =>
         set({
-          models: get().models.map((model) => ({
+          models: get().models.map(model => ({
             ...model,
             isSelected: model.name === modelName,
           })),

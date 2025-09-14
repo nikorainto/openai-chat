@@ -15,7 +15,11 @@ export default function CopyButton({ textToCopy }: Props) {
   }
 
   return (
-    <button aria-label="copy text" className="p-4 active:text-green-200" onClick={handleClick}>
+    <button
+      aria-label="copy text"
+      className="p-4 active:text-green-200"
+      onClick={handleClick}
+    >
       {copied ? (
         <PiCheckCircle className="text-xl text-green-500" />
       ) : (

@@ -29,32 +29,39 @@ export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({
       chats: [createChat()],
-      updateChatInput: (input) =>
+      updateChatInput: input =>
         set({
-          chats: get().chats.map((chat) => (chat.isSelected ? { ...chat, input } : chat)),
+          chats: get().chats.map(chat =>
+            chat.isSelected ? { ...chat, input } : chat,
+          ),
         }),
-      updateChatMessages: (messages) =>
+      updateChatMessages: messages =>
         set({
-          chats: get().chats.map((chat) => (chat.isSelected ? { ...chat, messages } : chat)),
+          chats: get().chats.map(chat =>
+            chat.isSelected ? { ...chat, messages } : chat,
+          ),
         }),
-      updateChatSelection: (chatId) =>
+      updateChatSelection: chatId =>
         set({
-          chats: get().chats.map((chat) => ({
+          chats: get().chats.map(chat => ({
             ...chat,
             isSelected: chat.id === chatId,
           })),
         }),
-      addChat: (chat) =>
+      addChat: chat =>
         set({
-          chats: [...get().chats.map((chat) => ({ ...chat, isSelected: false })), chat],
+          chats: [
+            ...get().chats.map(chat => ({ ...chat, isSelected: false })),
+            chat,
+          ],
         }),
-      delChat: (chatId) =>
+      delChat: chatId =>
         set({
           chats:
             get().chats.length === 1
               ? [createChat()]
               : get()
-                  .chats.filter((chat) => chat.id !== chatId)
+                  .chats.filter(chat => chat.id !== chatId)
                   .map((chat, index, self) => ({
                     ...chat,
                     isSelected: index === self.length - 1,

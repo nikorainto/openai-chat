@@ -9,7 +9,7 @@ import { useChatStore } from '@/zustand/chats'
 
 export default function Home() {
   const isHydrated = useHydration()
-  const chats = useChatStore((state) => state.chats)
+  const chats = useChatStore(state => state.chats)
 
   if (!isHydrated) {
     return <AppLoading />

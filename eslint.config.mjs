@@ -1,0 +1,44 @@
+import pluginJs from '@eslint/js'
+import nextPlugin from '@next/eslint-plugin-next'
+import importOrder from 'eslint-plugin-import'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
+
+export default [
+  { files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'] },
+  { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
+  {
+    ignores: [
+      'dist',
+      '.next',
+      'node_modules',
+      'public',
+      'test',
+      'yarn.lock',
+      'next-env.d.ts',
+      '**/sw.js*',
+      '**/workbox-*.js',
+    ],
+  },
+  {
+    plugins: {
+      import: importOrder,
+      '@next/next': nextPlugin,
+    },
+    rules: {
+      'require-await': 'error',
+      '@typescript-eslint/consistent-type-imports': 'error',
+      'import/order': [
+        'error',
+        {
+          alphabetize: {
+            order: 'asc',
+            caseInsensitive: true,
+          },
+        },
+      ],
+    },
+  },
+  pluginJs.configs.recommended,
+  ...tseslint.configs.recommended,
+]

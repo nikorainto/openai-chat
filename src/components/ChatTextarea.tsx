@@ -20,7 +20,12 @@ type Props = {
 const lineHeight = 32
 const maxHeight = 384
 
-export default function ChatTextarea({ selectedChatId, input, onChange, onSendMessage }: Props) {
+export default function ChatTextarea({
+  selectedChatId,
+  input,
+  onChange,
+  onSendMessage,
+}: Props) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const [overflow, setOverflow] = useState('overflow-hidden')
   const [rows, setRows] = useState(1)

@@ -8,8 +8,8 @@ import SettingsModal from './SettingsModal'
 import { useMobileMenuStore } from '@/zustand/mobileMenu'
 
 export default function MobileMenu() {
-  const isOpen = useMobileMenuStore((state) => state.isOpen)
-  const setIsOpen = useMobileMenuStore((state) => state.setIsOpen)
+  const isOpen = useMobileMenuStore(state => state.isOpen)
+  const setIsOpen = useMobileMenuStore(state => state.setIsOpen)
 
   const open = () => {
     setIsOpen(true)
