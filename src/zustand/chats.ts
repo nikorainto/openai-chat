@@ -7,6 +7,8 @@ export type Chat = {
   input: string
   messages: UIMessage[]
   isSelected: boolean
+  uploadedImageUrl?: string
+  messageImages: Record<string, string> // messageId -> imageUrl mapping
 }
 
 type ChatState = {
@@ -16,6 +18,8 @@ type ChatState = {
   updateChatSelection: (chatId: string) => void
   addChat: (chat: Chat) => void
   delChat: (chatId: string) => void
+  updateChatImage: (imageUrl?: string) => void
+  addMessageImage: (messageId: string, imageUrl: string) => void
 }
 
 export const createChat = (): Chat => ({
@@ -23,6 +27,7 @@ export const createChat = (): Chat => ({
   input: '',
   messages: [],
   isSelected: true,
+  messageImages: {},
 })
 
 export const useChatStore = create<ChatState>()(
@@ -55,7 +60,21 @@ export const useChatStore = create<ChatState>()(
             chat,
           ],
         }),
-      delChat: chatId =>
+      delChat: chatId => {
+        const chatToDelete = get().chats.find(chat => chat.id === chatId)
+
+        // Clean up uploaded image if it exists
+        if (chatToDelete?.uploadedImageUrl) {
+          fetch(
+            `/api/blob/delete?url=${encodeURIComponent(chatToDelete.uploadedImageUrl)}`,
+            {
+              method: 'DELETE',
+            },
+          ).catch(error => {
+            console.error('Failed to delete blob:', error)
+          })
+        }
+
         set({
           chats:
             get().chats.length === 1
@@ -66,6 +85,27 @@ export const useChatStore = create<ChatState>()(
                     ...chat,
                     isSelected: index === self.length - 1,
                   })),
+        })
+      },
+      updateChatImage: imageUrl =>
+        set({
+          chats: get().chats.map(chat =>
+            chat.isSelected ? { ...chat, uploadedImageUrl: imageUrl } : chat,
+          ),
+        }),
+      addMessageImage: (messageId, imageUrl) =>
+        set({
+          chats: get().chats.map(chat =>
+            chat.isSelected
+              ? {
+                  ...chat,
+                  messageImages: {
+                    ...chat.messageImages,
+                    [messageId]: imageUrl,
+                  },
+                }
+              : chat,
+          ),
         }),
     }),
     {

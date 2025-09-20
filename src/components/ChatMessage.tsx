@@ -7,9 +7,10 @@ import CopyButton from './CopyButton'
 
 type Props = {
   message: UIMessage
+  imageUrl?: string
 }
 
-function ChatMessage({ message }: Props) {
+function ChatMessage({ message, imageUrl }: Props) {
   const isBot = message.role === 'assistant'
 
   // Extract text content from message parts
@@ -21,6 +22,15 @@ function ChatMessage({ message }: Props) {
   return (
     <CommonLayout isBotMessage={isBot}>
       <div className="flex flex-col gap-2">
+        {imageUrl && (
+          <div className="mb-2">
+            <img
+              src={imageUrl}
+              alt="Attached image"
+              className="max-w-sm max-h-48 rounded-lg border border-gray-600 object-contain shadow-sm"
+            />
+          </div>
+        )}
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{

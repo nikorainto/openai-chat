@@ -11,6 +11,8 @@ type Props = {
   isLoading: boolean
   messages: UIMessage[]
   stop: () => void
+  uploadedImageUrl?: string
+  messageImages?: Record<string, string>
 }
 
 export default function ChatMessages({
@@ -18,6 +20,8 @@ export default function ChatMessages({
   messages,
   stop,
   error,
+  uploadedImageUrl,
+  messageImages = {},
 }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true)
@@ -61,9 +65,22 @@ export default function ChatMessages({
       ref={ref}
       onScroll={handleScroll}
     >
-      {messages.map((message: UIMessage) => (
-        <ChatMessage key={message.id} message={message} />
-      ))}
+      {messages.map((message: UIMessage, index) => {
+        // Show image if it's in messageImages mapping or if it's the last user message with uploadedImageUrl
+        const messageImageUrl = messageImages[message.id]
+        const shouldShowPendingImage =
+          uploadedImageUrl &&
+          message.role === 'user' &&
+          index === messages.length - 1
+
+        const imageUrl =
+          messageImageUrl ||
+          (shouldShowPendingImage ? uploadedImageUrl : undefined)
+
+        return (
+          <ChatMessage key={message.id} message={message} imageUrl={imageUrl} />
+        )
+      })}
 
       {shouldShowBotLoadingMessage && <ThreeDotsLoader />}
 

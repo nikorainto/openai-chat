@@ -16,6 +16,8 @@ export default function Chat() {
   const chats = useChatStore(state => state.chats)
   const updateChatInput = useChatStore(state => state.updateChatInput)
   const updateChatMessages = useChatStore(state => state.updateChatMessages)
+  const updateChatImage = useChatStore(state => state.updateChatImage)
+  const addMessageImage = useChatStore(state => state.addMessageImage)
   const models = useModelStore(state => state.models)
   const selectedChat = useMemo(
     () => chats.find(chat => chat.isSelected),
@@ -40,12 +42,25 @@ export default function Chat() {
         model: selectedModel?.name,
         role,
         apiKey,
+        imageUrl: selectedChat?.uploadedImageUrl,
       },
     }),
     messages: selectedChat?.messages || [],
     onFinish: () => {
       // Update chat messages when response is complete
       updateChatMessages(messages)
+
+      // If there was an uploaded image, store it with the last user message
+      if (selectedChat?.uploadedImageUrl && messages.length > 0) {
+        const lastUserMessage = [...messages]
+          .reverse()
+          .find(msg => msg.role === 'user')
+        if (lastUserMessage) {
+          addMessageImage(lastUserMessage.id, selectedChat.uploadedImageUrl)
+          // Clear the uploadedImageUrl after storing it with the message
+          updateChatImage(undefined)
+        }
+      }
     },
   })
 
@@ -110,6 +125,7 @@ export default function Chat() {
         void sendMessage({ text: input })
         updateChatInput('')
         setInput('')
+        // Don't clear the image here - let onFinish handle it
       }
     },
     [input, sendMessage, updateChatInput],
@@ -122,10 +138,34 @@ export default function Chat() {
         void sendMessage({ text: input })
         updateChatInput('')
         setInput('')
+        // Don't clear the image here - let onFinish handle it
       }
     },
     [input, sendMessage, updateChatInput],
   )
+
+  const handleImageUpload = useCallback(
+    (imageUrl: string) => {
+      updateChatImage(imageUrl)
+    },
+    [updateChatImage],
+  )
+
+  const handleImageRemove = useCallback(() => {
+    const imageUrl = selectedChat?.uploadedImageUrl
+
+    // Clear the image from UI immediately
+    updateChatImage(undefined)
+
+    // Delete from blob storage in background
+    if (imageUrl) {
+      fetch(`/api/blob/delete?url=${encodeURIComponent(imageUrl)}`, {
+        method: 'DELETE',
+      }).catch(error => {
+        console.error('Failed to delete blob:', error)
+      })
+    }
+  }, [updateChatImage, selectedChat?.uploadedImageUrl])
 
   return (
     <div className="overflow-hidden flex flex-col flex-1 gap-2">
@@ -136,6 +176,8 @@ export default function Chat() {
         stop={() => {
           void stop()
         }}
+        uploadedImageUrl={selectedChat?.uploadedImageUrl}
+        messageImages={selectedChat?.messageImages}
       />
 
       <div className="flex items-center gap-2 p-2 m-2 md:mt-0 md:ml-0 max-md:mt-0 rounded-lg bg-neutral-900">
@@ -144,6 +186,9 @@ export default function Chat() {
           input={input}
           onChange={handleChange}
           onSendMessage={handleSendMessage}
+          uploadedImageUrl={selectedChat?.uploadedImageUrl}
+          onImageUpload={handleImageUpload}
+          onImageRemove={handleImageRemove}
         />
         <button
           aria-label="send message"

@@ -7,11 +7,12 @@ export const runtime = 'edge'
 
 export async function POST(req: Request) {
   try {
-    const { messages, model, role, apiKey } = (await req.json()) as {
+    const { messages, model, role, apiKey, imageUrl } = (await req.json()) as {
       messages: UIMessage[]
       model: string
       role: string
       apiKey: string
+      imageUrl?: string
     }
 
     if (!model) {
@@ -22,6 +23,29 @@ export async function POST(req: Request) {
       apiKey: apiKey || process.env.OPENAI_API_KEY || '',
     })
 
+    // Convert messages and add image if provided
+    const convertedMessages = convertToModelMessages(messages)
+
+    // If there's an image URL and we have messages, add image to the last user message
+    if (imageUrl && convertedMessages.length > 0) {
+      const lastMessage = convertedMessages[convertedMessages.length - 1]
+      if (lastMessage.role === 'user') {
+        lastMessage.content = [
+          {
+            type: 'text',
+            text:
+              typeof lastMessage.content === 'string'
+                ? lastMessage.content
+                : 'Please analyze this image.',
+          },
+          {
+            type: 'image',
+            image: imageUrl,
+          },
+        ]
+      }
+    }
+
     const result = streamText({
       model: openai(model),
       messages: [
@@ -29,7 +53,7 @@ export async function POST(req: Request) {
           role: 'system',
           content: role,
         },
-        ...convertToModelMessages(messages),
+        ...convertedMessages,
       ],
     })
 

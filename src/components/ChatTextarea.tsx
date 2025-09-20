@@ -8,13 +8,17 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from 'react'
+import { PiXBold } from 'react-icons/pi'
+import ImageUpload from './ImageUpload'
 
 type Props = {
   selectedChatId?: string
   input: string
   onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void
   onSendMessage: (event: FormEvent<HTMLFormElement>) => void
-  file?: File
+  uploadedImageUrl?: string
+  onImageUpload: (imageUrl: string) => void
+  onImageRemove: () => void
 }
 
 const lineHeight = 32
@@ -25,6 +29,9 @@ export default function ChatTextarea({
   input,
   onChange,
   onSendMessage,
+  uploadedImageUrl,
+  onImageUpload,
+  onImageRemove,
 }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const [overflow, setOverflow] = useState('overflow-hidden')
@@ -68,16 +75,48 @@ export default function ChatTextarea({
   }
 
   return (
-    <textarea
-      className={`flex flex-1 p-4 max-h-96 rounded outline-none resize-none bg-neutral-900 leading-8 ${overflow}`}
-      id="chat-textarea"
-      ref={ref}
-      autoFocus
-      placeholder="Type your prompt…"
-      value={input}
-      rows={rows}
-      onChange={onChange}
-      onKeyDown={handleKeyDown}
-    />
+    <div className="flex flex-1 flex-col gap-2">
+      {uploadedImageUrl && (
+        <div className="flex items-center gap-2 p-2 bg-neutral-800 rounded">
+          <img
+            src={uploadedImageUrl}
+            alt="Uploaded"
+            className="w-12 h-12 rounded border border-gray-600 object-cover"
+          />
+          <span className="text-sm text-gray-400">File attached</span>
+          <button
+            onClick={e => {
+              e.preventDefault()
+              onImageRemove()
+              // Refocus textarea after removing image
+              setTimeout(() => {
+                if (ref.current) {
+                  ref.current.focus()
+                }
+              }, 0)
+            }}
+            className="ml-auto p-1 hover:bg-red-600 rounded text-white bg-red-500 cursor-pointer"
+          >
+            <PiXBold className="text-xs" />
+          </button>
+        </div>
+      )}
+      <div className="flex items-end gap-2">
+        <textarea
+          className={`flex flex-1 p-4 max-h-96 rounded outline-none resize-none bg-neutral-900 leading-8 ${overflow}`}
+          id="chat-textarea"
+          ref={ref}
+          autoFocus
+          placeholder="Type your prompt…"
+          value={input}
+          rows={rows}
+          onChange={onChange}
+          onKeyDown={handleKeyDown}
+        />
+        <div className="flex items-center">
+          <ImageUpload onImageUpload={onImageUpload} />
+        </div>
+      </div>
+    </div>
   )
 }
