@@ -1,12 +1,13 @@
 'use client'
 
-import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport } from 'ai'
+import type { ModelMessage } from 'ai'
 import type { ChangeEvent, FormEvent, MouseEvent } from 'react'
-import { useEffect, useMemo, useRef, useCallback, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PiPaperPlaneRightFill } from 'react-icons/pi'
 import ChatMessages from './ChatMessages'
 import ChatTextarea from './ChatTextarea'
+import ImagePreview from './ImagePreview'
+import ImageUpload, { type ImageAttachment } from './ImageUpload'
 import { useChatStore } from '@/zustand/chats'
 import { useModelStore } from '@/zustand/models'
 import { useSettingsStore } from '@/zustand/settings'
@@ -16,8 +17,6 @@ export default function Chat() {
   const chats = useChatStore(state => state.chats)
   const updateChatInput = useChatStore(state => state.updateChatInput)
   const updateChatMessages = useChatStore(state => state.updateChatMessages)
-  const updateChatImage = useChatStore(state => state.updateChatImage)
-  const addMessageImage = useChatStore(state => state.addMessageImage)
   const models = useModelStore(state => state.models)
   const selectedChat = useMemo(
     () => chats.find(chat => chat.isSelected),
@@ -32,40 +31,98 @@ export default function Chat() {
   const setStopFunction = useUtilsStore(state => state.setStopFunction)
   const clearStopFunction = useUtilsStore(state => state.clearStopFunction)
   const currentChatIdRef = useRef<string | undefined>(undefined)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [images, setImages] = useState<ImageAttachment[]>([])
+  const [isUploadingImages, setIsUploadingImages] = useState(false)
+
+  // Manual chat state management
   const [input, setInput] = useState('')
+  const [messages, setMessages] = useState<ModelMessage[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | undefined>()
+  const abortControllerRef = useRef<AbortController | null>(null)
 
-  const { messages, error, stop, status, sendMessage } = useChat({
-    id: selectedChat?.id,
-    transport: new DefaultChatTransport({
-      api: '/api/chat',
-      body: {
-        model: selectedModel?.name,
-        role,
-        apiKey,
-        imageUrl: selectedChat?.uploadedImageUrl,
-      },
-    }),
-    messages: selectedChat?.messages || [],
-    onFinish: () => {
-      // Update chat messages when response is complete
-      updateChatMessages(messages)
+  // Stop function
+  const stop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      setIsLoading(false)
+    }
+  }, [])
 
-      // If there was an uploaded image, store it with the last user message
-      if (selectedChat?.uploadedImageUrl && messages.length > 0) {
-        const lastUserMessage = [...messages]
-          .reverse()
-          .find(msg => msg.role === 'user')
-        if (lastUserMessage) {
-          addMessageImage(lastUserMessage.id, selectedChat.uploadedImageUrl)
-          // Clear the uploadedImageUrl after storing it with the message
-          updateChatImage(undefined)
+  const append = useCallback(
+    async (message: ModelMessage) => {
+      try {
+        setIsLoading(true)
+        setError(undefined)
+
+        const newMessages = [...messages, message]
+        setMessages(newMessages)
+
+        abortControllerRef.current = new AbortController()
+
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: newMessages,
+            model: selectedModel?.name,
+            role,
+            apiKey,
+          }),
+          signal: abortControllerRef.current.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
         }
+
+        const reader = response.body?.getReader()
+        if (!reader) {
+          throw new Error('No response body')
+        }
+
+        const decoder = new TextDecoder()
+        let assistantMessage = ''
+
+        // Add assistant message placeholder
+        const assistantMessageObj: ModelMessage = {
+          role: 'assistant',
+          content: '',
+        }
+        setMessages([...newMessages, assistantMessageObj])
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = decoder.decode(value, { stream: true })
+            assistantMessage += chunk
+
+            // Update the last message (assistant message)
+            setMessages([
+              ...newMessages,
+              { ...assistantMessageObj, content: assistantMessage },
+            ])
+          }
+        } finally {
+          reader.releaseLock()
+        }
+
+        setIsLoading(false)
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          setError(err)
+        }
+        setIsLoading(false)
       }
     },
-  })
+    [messages, selectedModel, role, apiKey],
+  )
 
   useEffect(() => {
-    setStopFunction(() => stop)
+    setStopFunction(stop)
     return () => clearStopFunction()
   }, [stop, setStopFunction, clearStopFunction])
 
@@ -78,94 +135,132 @@ export default function Chat() {
 
     if (chatSwitched) {
       setInput(selectedChat.input || '')
+      setMessages(selectedChat.messages || [])
+      setImages([]) // Clear images when switching chats
       currentChatIdRef.current = selectedChat.id
       return
     }
 
-    if (status === 'streaming' || messages.length === 0) {
+    if (isLoading || messages.length === 0) {
       return
     }
 
     const messagesChanged =
       messages.length !== selectedChat.messages.length ||
-      messages.some((msg, index) => {
-        const selectedMessage = selectedChat.messages[index]
-        if (!selectedMessage) return true
-        if (msg.id !== selectedMessage.id) return true
-
-        const msgText = msg.parts[0]?.type === 'text' ? msg.parts[0].text : ''
-        const selectedText =
-          selectedMessage.parts[0]?.type === 'text'
-            ? selectedMessage.parts[0].text
-            : ''
-
-        return msgText !== selectedText
-      })
+      messages.some(
+        (msg, index) =>
+          !selectedChat.messages[index] ||
+          JSON.stringify(msg) !== JSON.stringify(selectedChat.messages[index]),
+      )
 
     if (messagesChanged) {
       updateChatMessages(messages)
     }
-  }, [selectedChat, messages, status, updateChatMessages])
-
-  const isLoading = status === 'streaming' || status === 'submitted'
+  }, [selectedChat, messages, isLoading, updateChatMessages])
 
   const handleChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
-      const value = event.target.value
-      updateChatInput(value)
-      setInput(value)
+      updateChatInput(event.target.value)
+      setInput(event.target.value)
     },
     [updateChatInput],
   )
 
   const handleSendMessage = useCallback(
-    (event: FormEvent<HTMLFormElement>) => {
+    async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault()
-      if (input.trim()) {
-        void sendMessage({ text: input })
-        updateChatInput('')
-        setInput('')
-        // Don't clear the image here - let onFinish handle it
+
+      if (!input.trim() && images.length === 0) {
+        return
       }
+
+      // Check if any images are still uploading
+      const hasUploadingImages = images.some(img => img.isUploading)
+      if (hasUploadingImages) {
+        alert('Please wait for images to finish uploading before sending.')
+        return
+      }
+
+      // Check if the selected model supports vision
+      // GPT-4.1 support vision capabilities
+      const visionSupportedModels = ['gpt-4.1']
+      const supportsVision = visionSupportedModels.includes(
+        selectedModel?.name || '',
+      )
+
+      if (images.length > 0 && !supportsVision) {
+        alert(`Image uploads are only supported with vision-capable models.
+        
+Your current model: ${selectedModel?.name}
+Supported models: ${visionSupportedModels.join(', ')}
+        
+Please select a compatible model from the dropdown menu to use image functionality.`)
+        return
+      }
+
+      // Create content array for multimodal message
+      const content: Array<{ type: string; text?: string; image?: string }> = []
+
+      if (input.trim()) {
+        content.push({ type: 'text', text: input.trim() })
+      }
+
+      if (images.length > 0) {
+        images.forEach(image => {
+          if (image.blobData?.url) {
+            content.push({
+              type: 'image',
+              image: image.blobData.url,
+            })
+          }
+        })
+      }
+
+      // Clear input and images
+      updateChatInput('')
+      setInput('')
+
+      // Clean up image URLs
+      images.forEach(image => URL.revokeObjectURL(image.url))
+      setImages([])
+
+      // Send message with content array
+      await append({
+        role: 'user',
+        content:
+          content.length === 1 && content[0].type === 'text'
+            ? content[0].text!
+            : JSON.stringify(content),
+      })
+
+      // Refocus the textarea after message is sent
+      setTimeout(() => {
+        textareaRef.current?.focus()
+      }, 100)
     },
-    [input, sendMessage, updateChatInput],
+    [input, images, selectedModel, updateChatInput, append],
   )
 
   const handleSendMessageClick = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
-      event.preventDefault()
-      if (input.trim()) {
-        void sendMessage({ text: input })
-        updateChatInput('')
-        setInput('')
-        // Don't clear the image here - let onFinish handle it
-      }
+      handleSendMessage(event as unknown as FormEvent<HTMLFormElement>)
     },
-    [input, sendMessage, updateChatInput],
+    [handleSendMessage],
   )
 
-  const handleImageUpload = useCallback(
-    (imageUrl: string) => {
-      updateChatImage(imageUrl)
-    },
-    [updateChatImage],
-  )
+  const handleImagesChange = useCallback((newImages: ImageAttachment[]) => {
+    setImages(newImages)
+  }, [])
 
-  const handleImageRemove = useCallback(() => {
-    const imageUrl = selectedChat?.uploadedImageUrl
+  const handleUploadStateChange = useCallback((uploading: boolean) => {
+    setIsUploadingImages(uploading)
+  }, [])
 
-    // Clear the image from UI immediately
-    updateChatImage(undefined)
-
-    // Delete from blob storage in background
-    if (imageUrl) {
-      fetch(`/api/blob/delete?url=${encodeURIComponent(imageUrl)}`, {
-        method: 'DELETE',
-      }).catch(error => {
-        console.error('Failed to delete blob:', error)
-      })
-    }
-  }, [updateChatImage, selectedChat?.uploadedImageUrl])
+  // Check if any images are still uploading or if we're in upload state
+  const hasUploadingImages =
+    images.some(img => img.isUploading) || isUploadingImages
+  const isSubmitDisabled =
+    isLoading || hasUploadingImages || (!input.trim() && images.length === 0)
 
   return (
     <div className="overflow-hidden flex flex-col flex-1 gap-2">
@@ -173,30 +268,44 @@ export default function Chat() {
         error={error}
         isLoading={isLoading}
         messages={messages}
-        stop={() => {
-          void stop()
-        }}
-        uploadedImageUrl={selectedChat?.uploadedImageUrl}
-        messageImages={selectedChat?.messageImages}
+        stop={stop}
       />
 
-      <div className="flex items-center gap-2 p-2 m-2 md:mt-0 md:ml-0 max-md:mt-0 rounded-lg bg-neutral-900">
-        <ChatTextarea
-          selectedChatId={selectedChat?.id}
-          input={input}
-          onChange={handleChange}
-          onSendMessage={handleSendMessage}
-          uploadedImageUrl={selectedChat?.uploadedImageUrl}
-          onImageUpload={handleImageUpload}
-          onImageRemove={handleImageRemove}
+      <div className="p-1 m-1 md:mt-0 md:ml-0 max-md:mt-0">
+        <ImagePreview
+          images={images}
+          onImagesChange={handleImagesChange}
+          disabled={isLoading}
         />
-        <button
-          aria-label="send message"
-          className="flex items-center justify-center p-4 rounded-full bg-green-500"
-          onClick={handleSendMessageClick}
-        >
-          <PiPaperPlaneRightFill className="text-xl" />
-        </button>
+
+        <div className="flex items-center gap-1 rounded-lg bg-neutral-900 p-1 pr-3">
+          <ChatTextarea
+            ref={textareaRef}
+            selectedChatId={selectedChat?.id}
+            input={input}
+            onChange={handleChange}
+            onSendMessage={handleSendMessage}
+            images={images}
+            onImagesChange={handleImagesChange}
+            disabled={isLoading}
+          />
+          <div className="flex items-center gap-1">
+            <ImageUpload
+              images={images}
+              onImagesChange={handleImagesChange}
+              onUploadStateChange={handleUploadStateChange}
+              disabled={isLoading}
+            />
+            <button
+              aria-label="send message"
+              className="flex items-center justify-center p-3 rounded-full bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed flex-shrink-0 min-w-[48px] min-h-[48px]"
+              onClick={handleSendMessageClick}
+              disabled={isSubmitDisabled}
+            >
+              <PiPaperPlaneRightFill className="text-xl" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

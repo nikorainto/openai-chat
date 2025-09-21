@@ -1,25 +1,25 @@
-import type { UIMessage } from 'ai'
+import type { ModelMessage } from 'ai'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import {
+  extractImageUrlsFromMessages,
+  deleteImageFromBlob,
+} from '@/utils/blobStorage'
 
 export type Chat = {
   id: string
   input: string
-  messages: UIMessage[]
+  messages: ModelMessage[]
   isSelected: boolean
-  uploadedImageUrl?: string
-  messageImages: Record<string, string> // messageId -> imageUrl mapping
 }
 
 type ChatState = {
   chats: Chat[]
   updateChatInput: (input: string) => void
-  updateChatMessages: (messages: UIMessage[]) => void
+  updateChatMessages: (messages: ModelMessage[]) => void
   updateChatSelection: (chatId: string) => void
   addChat: (chat: Chat) => void
   delChat: (chatId: string) => void
-  updateChatImage: (imageUrl?: string) => void
-  addMessageImage: (messageId: string, imageUrl: string) => void
 }
 
 export const createChat = (): Chat => ({
@@ -27,7 +27,6 @@ export const createChat = (): Chat => ({
   input: '',
   messages: [],
   isSelected: true,
-  messageImages: {},
 })
 
 export const useChatStore = create<ChatState>()(
@@ -61,17 +60,15 @@ export const useChatStore = create<ChatState>()(
           ],
         }),
       delChat: chatId => {
+        // Find the chat being deleted and extract image URLs for cleanup
         const chatToDelete = get().chats.find(chat => chat.id === chatId)
-
-        // Clean up uploaded image if it exists
-        if (chatToDelete?.uploadedImageUrl) {
-          fetch(
-            `/api/blob/delete?url=${encodeURIComponent(chatToDelete.uploadedImageUrl)}`,
-            {
-              method: 'DELETE',
-            },
-          ).catch(error => {
-            console.error('Failed to delete blob:', error)
+        if (chatToDelete) {
+          const imageUrls = extractImageUrlsFromMessages(chatToDelete.messages)
+          // Clean up blob images asynchronously
+          imageUrls.forEach((url: string) => {
+            deleteImageFromBlob(url).catch((error: unknown) => {
+              console.error('Failed to delete image from blob storage:', error)
+            })
           })
         }
 
@@ -87,29 +84,7 @@ export const useChatStore = create<ChatState>()(
                   })),
         })
       },
-      updateChatImage: imageUrl =>
-        set({
-          chats: get().chats.map(chat =>
-            chat.isSelected ? { ...chat, uploadedImageUrl: imageUrl } : chat,
-          ),
-        }),
-      addMessageImage: (messageId, imageUrl) =>
-        set({
-          chats: get().chats.map(chat =>
-            chat.isSelected
-              ? {
-                  ...chat,
-                  messageImages: {
-                    ...chat.messageImages,
-                    [messageId]: imageUrl,
-                  },
-                }
-              : chat,
-          ),
-        }),
     }),
-    {
-      name: 'chats',
-    },
+    { name: 'chats' },
   ),
 )

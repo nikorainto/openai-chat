@@ -1,6 +1,6 @@
 'use client'
 
-import type { UIMessage } from 'ai'
+import type { ModelMessage } from 'ai'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { PiStopFill } from 'react-icons/pi'
 import ChatMessage from './ChatMessage'
@@ -9,10 +9,8 @@ import ThreeDotsLoader from './ThreeDotsLoader'
 type Props = {
   error?: Error
   isLoading: boolean
-  messages: UIMessage[]
+  messages: ModelMessage[]
   stop: () => void
-  uploadedImageUrl?: string
-  messageImages?: Record<string, string>
 }
 
 export default function ChatMessages({
@@ -20,8 +18,6 @@ export default function ChatMessages({
   messages,
   stop,
   error,
-  uploadedImageUrl,
-  messageImages = {},
 }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true)
@@ -29,12 +25,10 @@ export default function ChatMessages({
   const errorMessage = useMemo(() => {
     if (!error) return ''
     try {
-      const errorObject = JSON.parse(error.message) as { message?: string }
-      return typeof errorObject.message === 'string'
-        ? errorObject.message
-        : 'An unexpected error occurred.'
+      const errorObject = JSON.parse(error.message)
+      return errorObject.message
     } catch {
-      return 'An unexpected error occurred.'
+      return 'An unexpected error has occurred'
     }
   }, [error])
 
@@ -65,22 +59,9 @@ export default function ChatMessages({
       ref={ref}
       onScroll={handleScroll}
     >
-      {messages.map((message: UIMessage, index) => {
-        // Show image if it's in messageImages mapping or if it's the last user message with uploadedImageUrl
-        const messageImageUrl = messageImages[message.id]
-        const shouldShowPendingImage =
-          uploadedImageUrl &&
-          message.role === 'user' &&
-          index === messages.length - 1
-
-        const imageUrl =
-          messageImageUrl ||
-          (shouldShowPendingImage ? uploadedImageUrl : undefined)
-
-        return (
-          <ChatMessage key={message.id} message={message} imageUrl={imageUrl} />
-        )
-      })}
+      {messages.map((message: ModelMessage, index: number) => (
+        <ChatMessage key={`message-${index}`} message={message} />
+      ))}
 
       {shouldShowBotLoadingMessage && <ThreeDotsLoader />}
 

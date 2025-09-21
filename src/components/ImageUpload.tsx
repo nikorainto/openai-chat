@@ -1,126 +1,145 @@
 'use client'
 
-import { useState, useRef, type ChangeEvent, type DragEvent } from 'react'
-import { PiFileBold, PiSpinnerBold } from 'react-icons/pi'
+import { useRef, useState } from 'react'
+import { PiImageBold, PiSpinnerBold } from 'react-icons/pi'
+import { uploadImageToBlob, type BlobImageData } from '../utils/blobStorage'
 
-interface ImageUploadProps {
-  onImageUpload: (imageUrl: string) => void
+export interface ImageAttachment {
+  file: File
+  url: string // Local preview URL
+  blobData?: BlobImageData // Vercel Blob storage data
+  isUploading?: boolean
+}
+
+interface Props {
+  images: ImageAttachment[]
+  onImagesChange: (images: ImageAttachment[]) => void
+  onUploadStateChange?: (isUploading: boolean) => void
   disabled?: boolean
 }
 
 export default function ImageUpload({
-  onImageUpload,
-  disabled = false,
-}: ImageUploadProps) {
-  const [isUploading, setIsUploading] = useState(false)
-  const [isDragOver, setIsDragOver] = useState(false)
+  images,
+  onImagesChange,
+  onUploadStateChange,
+  disabled,
+}: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
-  const uploadFile = async (file: File) => {
-    setIsUploading(true)
-    try {
-      const timestamp = Date.now()
-      const filename = `${timestamp}-${file.name}`
+  const handleFileSelect = async (files: FileList | null) => {
+    if (!files || disabled) return
 
-      const response = await fetch(
-        `/api/blob/upload?filename=${encodeURIComponent(filename)}`,
-        {
-          method: 'POST',
-          body: file,
-        },
-      )
+    const validFiles = Array.from(files).filter(file => {
+      // Check file type
+      if (!file.type.startsWith('image/')) return false
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Upload failed')
+      // Check file size (limit to 20MB)
+      if (file.size > 20 * 1024 * 1024) {
+        alert(
+          `File ${file.name} is too large. Please select images under 20MB.`,
+        )
+        return false
       }
 
-      const result = await response.json()
-      onImageUpload(result.url)
+      return true
+    })
 
-      // Reset file input so the same file can be selected again
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+    if (validFiles.length === 0) return
+
+    setIsProcessing(true)
+    onUploadStateChange?.(true)
+
+    try {
+      // First, add images with preview URLs and uploading state
+      const newImages: ImageAttachment[] = validFiles.map(file => ({
+        file,
+        url: URL.createObjectURL(file),
+        isUploading: true,
+      }))
+
+      const updatedImages = [...images, ...newImages]
+      onImagesChange(updatedImages)
+
+      // Upload images to Vercel Blob one by one
+      for (let i = 0; i < newImages.length; i++) {
+        try {
+          const blobData = await uploadImageToBlob(newImages[i].file)
+
+          // Update the specific image with blob data
+          const imageIndex = images.length + i
+          const finalImages = [...updatedImages]
+          finalImages[imageIndex] = {
+            ...finalImages[imageIndex],
+            blobData,
+            isUploading: false,
+          }
+          onImagesChange(finalImages)
+        } catch (error) {
+          console.error('Error uploading image:', error)
+
+          // Remove the failed image
+          const imageIndex = images.length + i
+          const finalImages = [...updatedImages]
+          finalImages.splice(imageIndex, 1)
+          onImagesChange(finalImages)
+
+          alert(`Failed to upload ${newImages[i].file.name}. Please try again.`)
+        }
       }
     } catch (error) {
-      console.error('Upload error:', error)
-      alert(error instanceof Error ? error.message : 'Failed to upload image')
+      console.error('Error processing images:', error)
+      alert('Error processing images. Please try again.')
     } finally {
-      setIsUploading(false)
-    }
-  }
-
-  const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      uploadFile(file)
-    }
-    // Reset the input value so the same file can be selected again
-    event.target.value = ''
-  }
-
-  const handleDragOver = (event: DragEvent) => {
-    event.preventDefault()
-    setIsDragOver(true)
-  }
-
-  const handleDragLeave = (event: DragEvent) => {
-    event.preventDefault()
-    setIsDragOver(false)
-  }
-
-  const handleDrop = (event: DragEvent) => {
-    event.preventDefault()
-    setIsDragOver(false)
-
-    const file = event.dataTransfer.files[0]
-    if (file && file.type.startsWith('image/')) {
-      uploadFile(file)
+      setIsProcessing(false)
+      onUploadStateChange?.(false)
     }
   }
 
   const handleClick = () => {
-    if (!disabled && !isUploading) {
-      // Small delay to ensure any pending state updates are complete
-      setTimeout(() => {
-        fileInputRef.current?.click()
-      }, 10)
-    }
+    if (disabled || isProcessing) return
+    fileInputRef.current?.click()
   }
 
-  // Always show the upload button, don't show the uploaded image here
-  // as it's handled in ChatTextarea
+  const hasUploadingImages = images.some(img => img.isUploading)
 
   return (
-    <div className="relative">
+    <>
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        onChange={handleFileSelect}
+        multiple
         className="hidden"
-        disabled={disabled || isUploading}
+        onChange={e => handleFileSelect(e.target.files)}
+        disabled={disabled || isProcessing}
       />
 
       <button
         onClick={handleClick}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        className={`
-          p-2 rounded transition-colors
-          ${isDragOver ? 'bg-green-600' : 'bg-neutral-700 hover:bg-neutral-600'}
-          ${disabled || isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-        `}
-        disabled={disabled || isUploading}
+        disabled={disabled || isProcessing}
+        className={`flex items-center justify-center p-3 rounded-full transition-colors flex-shrink-0 min-w-[48px] min-h-[48px] ${
+          disabled || isProcessing
+            ? 'text-neutral-500 cursor-not-allowed bg-gray-600'
+            : images.length > 0
+              ? 'text-white bg-blue-500 hover:bg-blue-600'
+              : 'text-neutral-400 bg-neutral-700 hover:bg-neutral-600'
+        }`}
         aria-label="Upload image"
+        title={
+          hasUploadingImages
+            ? 'Uploading images...'
+            : images.length > 0
+              ? `${images.length} image${images.length > 1 ? 's' : ''} attached`
+              : 'Upload images'
+        }
       >
-        {isUploading ? (
+        {isProcessing || hasUploadingImages ? (
           <PiSpinnerBold className="text-xl animate-spin" />
         ) : (
-          <PiFileBold className="text-xl" />
+          <PiImageBold className="text-xl" />
         )}
       </button>
-    </div>
+    </>
   )
 }

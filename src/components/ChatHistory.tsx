@@ -25,11 +25,19 @@ export default function ChatHistory() {
 
     if (chat.messages.length) {
       const lastMessage = chat.messages[chat.messages.length - 1]
-      const textContent = lastMessage.parts
-        .filter(part => part.type === 'text')
-        .map(part => part.text)
-        .join('')
-      return textContent || 'Chat'
+      if (typeof lastMessage.content === 'string') {
+        return lastMessage.content
+      } else if (Array.isArray(lastMessage.content)) {
+        // Extract text from content array
+        const textParts = lastMessage.content
+          .filter(
+            (part: { type: string; text?: string }) => part.type === 'text',
+          )
+          .map((part: { type: string; text?: string }) => part.text)
+        return textParts.join(' ') || 'Message with media'
+      } else {
+        return 'Message'
+      }
     }
 
     if (chat.input) {
@@ -67,7 +75,7 @@ export default function ChatHistory() {
           </button>
           <button
             aria-label="remove chat"
-            className="flex items-center p-4 rounded-r bg-neutral-700 active:text-red-200"
+            className="flex items-center p-4 rounded-r bg-neutral-700 active:text-red-200 hover:cursor-pointer"
             onClick={() => handleDelChat(chat.id)}
           >
             <PiTrashBold className="shrink-0" />

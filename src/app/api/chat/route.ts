@@ -1,63 +1,84 @@
 import { createOpenAI } from '@ai-sdk/openai'
-import { streamText, convertToModelMessages } from 'ai'
-import type { UIMessage } from 'ai'
+import { streamText } from 'ai'
+import type { ModelMessage } from 'ai'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'edge'
 
+function processMessage(message: ModelMessage): ModelMessage {
+  // Check if the content is a JSON string (multimodal message)
+  if (typeof message.content === 'string' && message.content.startsWith('[')) {
+    try {
+      const contentArray = JSON.parse(message.content)
+
+      // Convert our format to AI SDK format
+      const aiContent = contentArray.map(
+        (item: { type: string; text?: string; image?: string }) => {
+          if (item.type === 'text') {
+            return { type: 'text', text: item.text }
+          } else if (item.type === 'image') {
+            // For Vercel AI SDK, use the URL directly
+            return {
+              type: 'image',
+              image: item.image,
+            }
+          }
+          return item
+        },
+      )
+
+      return { ...message, content: aiContent }
+    } catch {
+      // If parsing fails, treat as regular text
+      return message
+    }
+  }
+
+  return message
+}
+
 export async function POST(req: Request) {
   try {
-    const { messages, model, role, apiKey, imageUrl } = (await req.json()) as {
-      messages: UIMessage[]
+    const {
+      messages,
+      model,
+      role,
+      apiKey,
+    }: {
+      messages: ModelMessage[]
       model: string
       role: string
       apiKey: string
-      imageUrl?: string
-    }
+    } = await req.json()
 
-    if (!model) {
-      return NextResponse.json({ error: 'Model is required' }, { status: 400 })
+    const key = apiKey || process.env.OPENAI_API_KEY || ''
+
+    if (!key || key === 'test' || key === 'test-key') {
+      return NextResponse.json(
+        {
+          error:
+            'Please provide a valid OpenAI API key. You can find your API key at https://platform.openai.com/account/api-keys.',
+        },
+        { status: 400 },
+      )
     }
 
     const openai = createOpenAI({
-      apiKey: apiKey || process.env.OPENAI_API_KEY || '',
+      apiKey: key,
     })
 
-    // Convert messages and add image if provided
-    const convertedMessages = convertToModelMessages(messages)
-
-    // If there's an image URL and we have messages, add image to the last user message
-    if (imageUrl && convertedMessages.length > 0) {
-      const lastMessage = convertedMessages[convertedMessages.length - 1]
-      if (lastMessage.role === 'user') {
-        lastMessage.content = [
-          {
-            type: 'text',
-            text:
-              typeof lastMessage.content === 'string'
-                ? lastMessage.content
-                : 'Please analyze this image.',
-          },
-          {
-            type: 'image',
-            image: imageUrl,
-          },
-        ]
-      }
-    }
+    // Process messages to handle multimodal content
+    const processedMessages = messages.map(processMessage)
 
     const result = streamText({
       model: openai(model),
       messages: [
-        {
-          role: 'system',
-          content: role,
-        },
-        ...convertedMessages,
+        ...(role ? [{ role: 'system' as const, content: role }] : []),
+        ...processedMessages,
       ],
     })
 
-    return result.toUIMessageStreamResponse()
+    return result.toTextStreamResponse()
   } catch (error) {
     console.error('Chat API error:', error)
     return NextResponse.json(
