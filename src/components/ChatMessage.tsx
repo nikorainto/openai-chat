@@ -1,11 +1,13 @@
 import type { ModelMessage } from 'ai'
 import React, { memo } from 'react'
+import { TbWorldSearch } from 'react-icons/tb'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import CommonLayout from './CommonLayout'
 import CopyButton from './CopyButton'
 
-type Props = { message: ModelMessage }
+type ExtendedMessage = ModelMessage & { webSearchUsed?: boolean }
+type Props = { message: ExtendedMessage }
 
 function ChatMessage({ message }: Props) {
   const isBot = message.role === 'assistant'
@@ -54,6 +56,13 @@ function ChatMessage({ message }: Props) {
   return (
     <CommonLayout isBotMessage={isBot}>
       <div className="flex flex-col gap-2">
+        {/* Web search indicator */}
+        {isBot && message.webSearchUsed && (
+          <div className="flex items-center gap-1 text-xs text-blue-400 mb-1">
+            <TbWorldSearch className="w-3 h-3" />
+            <span>Web search used</span>
+          </div>
+        )}
         {/* Display images if present */}
         {images.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-2">

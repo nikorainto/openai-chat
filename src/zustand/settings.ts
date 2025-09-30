@@ -6,6 +6,8 @@ type SettingsState = {
   updateRole: (newRole: string) => void
   apiKey: string
   updateApiKey: (newApiKey: string) => void
+  webSearchEnabled: boolean
+  updateWebSearchEnabled: (enabled: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -15,6 +17,8 @@ export const useSettingsStore = create<SettingsState>()(
       updateRole: newRole => set({ role: newRole }),
       apiKey: '',
       updateApiKey: newApiKey => set({ apiKey: newApiKey }),
+      webSearchEnabled: true,
+      updateWebSearchEnabled: enabled => set({ webSearchEnabled: enabled }),
     }),
     {
       name: 'settings',
