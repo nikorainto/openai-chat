@@ -65,8 +65,8 @@ export const useChatStore = create<ChatState>()(
         if (chatToDelete) {
           const imageUrls = extractImageUrlsFromMessages(chatToDelete.messages)
           // Clean up blob images asynchronously
-          imageUrls.forEach(url => {
-            deleteImageFromBlob(url).catch(error => {
+          imageUrls.forEach((url: string) => {
+            deleteImageFromBlob(url).catch((error: unknown) => {
               console.error('Failed to delete image from blob storage:', error)
             })
           })

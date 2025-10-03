@@ -9,7 +9,7 @@ export default function CopyButton({ textToCopy }: Props) {
   const [copied, setCopied] = useState(false)
 
   const handleClick = () => {
-    navigator.clipboard.writeText(textToCopy)
+    void navigator.clipboard.writeText(textToCopy)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

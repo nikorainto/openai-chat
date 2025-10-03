@@ -13,6 +13,8 @@ import { useModelStore } from '@/zustand/models'
 import { useSettingsStore } from '@/zustand/settings'
 import { useUtilsStore } from '@/zustand/utils'
 
+type ExtendedModelMessage = ModelMessage & { webSearchUsed?: boolean }
+
 export default function Chat() {
   const chats = useChatStore(state => state.chats)
   const updateChatInput = useChatStore(state => state.updateChatInput)
@@ -28,6 +30,7 @@ export default function Chat() {
   )
   const role = useSettingsStore(state => state.role)
   const apiKey = useSettingsStore(state => state.apiKey)
+  const webSearchEnabled = useSettingsStore(state => state.webSearchEnabled)
   const setStopFunction = useUtilsStore(state => state.setStopFunction)
   const clearStopFunction = useUtilsStore(state => state.clearStopFunction)
   const currentChatIdRef = useRef<string | undefined>(undefined)
@@ -37,7 +40,7 @@ export default function Chat() {
 
   // Manual chat state management
   const [input, setInput] = useState('')
-  const [messages, setMessages] = useState<ModelMessage[]>([])
+  const [messages, setMessages] = useState<ExtendedModelMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | undefined>()
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -69,6 +72,7 @@ export default function Chat() {
             model: selectedModel?.name,
             role,
             apiKey,
+            webSearchEnabled,
           }),
           signal: abortControllerRef.current.signal,
         })
@@ -84,11 +88,13 @@ export default function Chat() {
 
         const decoder = new TextDecoder()
         let assistantMessage = ''
+        let webSearchUsed = false
 
         // Add assistant message placeholder
-        const assistantMessageObj: ModelMessage = {
+        const assistantMessageObj: ExtendedModelMessage = {
           role: 'assistant',
           content: '',
+          webSearchUsed: false,
         }
         setMessages([...newMessages, assistantMessageObj])
 
@@ -98,12 +104,28 @@ export default function Chat() {
             if (done) break
 
             const chunk = decoder.decode(value, { stream: true })
-            assistantMessage += chunk
+
+            // Check for web search metadata marker
+            const WEB_SEARCH_MARKER = '__WEB_SEARCH_USED__'
+            if (chunk.includes(WEB_SEARCH_MARKER)) {
+              webSearchUsed = true
+              // Remove the metadata marker from the content and clean up any extra newlines
+              const cleanedChunk = chunk
+                .replace(WEB_SEARCH_MARKER, '')
+                .replace(/\n+/g, '\n')
+              assistantMessage += cleanedChunk
+            } else {
+              assistantMessage += chunk
+            }
 
             // Update the last message (assistant message)
             setMessages([
               ...newMessages,
-              { ...assistantMessageObj, content: assistantMessage },
+              {
+                ...assistantMessageObj,
+                content: assistantMessage,
+                webSearchUsed,
+              },
             ])
           }
         } finally {
@@ -118,7 +140,7 @@ export default function Chat() {
         setIsLoading(false)
       }
     },
-    [messages, selectedModel, role, apiKey],
+    [messages, selectedModel, role, apiKey, webSearchEnabled],
   )
 
   useEffect(() => {
@@ -135,7 +157,13 @@ export default function Chat() {
 
     if (chatSwitched) {
       setInput(selectedChat.input || '')
-      setMessages(selectedChat.messages || [])
+      // Convert regular messages to extended messages (webSearchUsed will be undefined/false)
+      setMessages(
+        (selectedChat.messages || []).map(msg => ({
+          ...msg,
+          webSearchUsed: false,
+        })),
+      )
       setImages([]) // Clear images when switching chats
       currentChatIdRef.current = selectedChat.id
       return
@@ -154,7 +182,11 @@ export default function Chat() {
       )
 
     if (messagesChanged) {
-      updateChatMessages(messages)
+      // Convert extended messages to regular ModelMessage for storage
+      const regularMessages: ModelMessage[] = messages.map(
+        msg => msg as ModelMessage,
+      )
+      updateChatMessages(regularMessages)
     }
   }, [selectedChat, messages, isLoading, updateChatMessages])
 

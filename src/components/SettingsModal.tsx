@@ -7,13 +7,21 @@ import { useSettingsStore } from '@/zustand/settings'
 export default function SettingsModal() {
   const previousRole = useSettingsStore(state => state.role)
   const updateRole = useSettingsStore(state => state.updateRole)
-  const resetToDefault = useSettingsStore(state => state.resetToDefault)
   const previousApiKey = useSettingsStore(state => state.apiKey)
   const updateApiKey = useSettingsStore(state => state.updateApiKey)
+  const previousWebSearchEnabled = useSettingsStore(
+    state => state.webSearchEnabled,
+  )
+  const updateWebSearchEnabled = useSettingsStore(
+    state => state.updateWebSearchEnabled,
+  )
 
   const [modalOpen, setModalOpen] = useState(false)
   const [role, setRole] = useState(previousRole)
   const [apiKey, setApiKey] = useState(previousApiKey)
+  const [webSearchEnabled, setWebSearchEnabled] = useState(
+    previousWebSearchEnabled,
+  )
 
   const handleOpenModal = () => setModalOpen(true)
   const handleCloseModal = () => setModalOpen(false)
@@ -28,20 +36,25 @@ export default function SettingsModal() {
     setApiKey(newValue)
   }
 
+  const handleChangeWebSearch = (event: ChangeEvent<HTMLInputElement>) => {
+    setWebSearchEnabled(event.target.checked)
+  }
+
   const handleResetToDefault = () => {
-    resetToDefault()
-    setRole(useSettingsStore.getState().role) // Update local state to reflect the reset
+    setRole('')
   }
 
   const handleCancel = () => {
-    updateRole(previousRole)
-    updateApiKey(previousApiKey)
+    setRole(previousRole)
+    setApiKey(previousApiKey)
+    setWebSearchEnabled(previousWebSearchEnabled)
     handleCloseModal()
   }
 
   const handleAccept = () => {
     updateRole(role.trim())
     updateApiKey(apiKey.trim())
+    updateWebSearchEnabled(webSearchEnabled)
     handleCloseModal()
   }
 
@@ -115,6 +128,36 @@ export default function SettingsModal() {
               value={apiKey}
               onChange={handleChangeApiKey}
             />
+          </div>
+          <div>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={webSearchEnabled}
+                onChange={handleChangeWebSearch}
+              />
+              <div className="relative">
+                <div
+                  className={`block w-14 h-8 rounded-full transition-colors ${
+                    webSearchEnabled ? 'bg-green-600' : 'bg-neutral-600'
+                  }`}
+                ></div>
+                <div
+                  className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${
+                    webSearchEnabled ? 'transform translate-x-6' : ''
+                  }`}
+                ></div>
+              </div>
+              <div className="ml-3">
+                <span className="text-sm font-medium text-gray-200">
+                  Enable Web Search
+                </span>
+                <div className="text-xs text-gray-500">
+                  Allow AI to search the web for current information
+                </div>
+              </div>
+            </label>
           </div>
           <div className="flex flex-row mt-4 justify-end gap-2">
             <button

@@ -16,6 +16,8 @@ export default [
       'test',
       'yarn.lock',
       'next-env.d.ts',
+      '**/sw.js*',
+      '**/workbox-*.js',
     ],
   },
   {
@@ -35,11 +37,6 @@ export default [
           },
         },
       ],
-      // Next.js specific rules
-      '@next/next/no-html-link-for-pages': 'error',
-      '@next/next/no-img-element': 'warn',
-      '@next/next/no-unwanted-polyfillio': 'error',
-      '@next/next/no-page-custom-font': 'error',
     },
   },
   pluginJs.configs.recommended,
