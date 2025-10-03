@@ -40,6 +40,10 @@ export default function SettingsModal() {
     setWebSearchEnabled(event.target.checked)
   }
 
+  const handleResetToDefault = () => {
+    setRole('')
+  }
+
   const handleCancel = () => {
     setRole(previousRole)
     setApiKey(previousApiKey)
@@ -72,9 +76,18 @@ export default function SettingsModal() {
             >
               Give bot a role
             </label>
-            <label className="block mb-2 text-xs font-medium text-gray-500">
-              Given role will affect all new chats from now on
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-medium text-gray-500">
+                Given role will affect all new chats from now on
+              </label>
+              <button
+                type="button"
+                className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
+                onClick={handleResetToDefault}
+              >
+                Reset to default
+              </button>
+            </div>
             <textarea
               id="message"
               rows={4}

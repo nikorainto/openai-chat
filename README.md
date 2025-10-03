@@ -2,6 +2,16 @@
 
 A cost-effective, mobile-first chat UI, designed with OpenAI API, Next.js, and Tailwind CSS, uses credits for a cheaper alternative to costly subscriptions.
 
+## Features
+
+✨ **Image Support**: Upload and analyze images
+
+- 📎 Drag & drop images directly into the chat
+- 📋 Paste images from clipboard (Ctrl/Cmd + V)
+- 🖼️ Support for multiple image formats (PNG, JPG, GIF, WebP, etc.)
+- 🔍 Ask questions about uploaded images
+- 👁️ View full-size images by clicking on them
+
 ## Getting Started
 
 First, create a
